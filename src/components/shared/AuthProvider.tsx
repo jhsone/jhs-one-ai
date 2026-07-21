@@ -49,10 +49,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .from('profiles')
             .select('preferred_lang')
             .eq('id', initialSession.user.id)
-            .single()
+            .maybeSingle()
           if (profile?.preferred_lang && mounted) {
-            const lang = profile.preferred_lang as Lang
-            useAppStore.getState().setLanguage(lang)
+            useAppStore.getState().setLanguage(profile.preferred_lang as Lang)
           }
         }
 
@@ -66,10 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .from('profiles')
               .select('preferred_lang')
               .eq('id', newSession.user.id)
-              .single()
+              .maybeSingle()
             if (profile?.preferred_lang && mounted) {
-              const lang = profile.preferred_lang as Lang
-              useAppStore.getState().setLanguage(lang)
+              useAppStore.getState().setLanguage(profile.preferred_lang as Lang)
             }
           }
         })
