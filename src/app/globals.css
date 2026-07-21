@@ -44,15 +44,6 @@ body {
   overflow: hidden;
 }
 
-@keyframes bounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
-}
-
-.animate-bounce {
-  animation: bounce 1.4s infinite ease-in-out;
-}
-
 ::-webkit-scrollbar {
   width: 4px;
 }
@@ -97,10 +88,6 @@ body {
 
 .safe-pb {
   padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.safe-pt {
-  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* Markdown & Code Block Styles */
