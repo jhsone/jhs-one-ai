@@ -3,18 +3,7 @@
 import { create } from 'zustand'
 import { setLanguage } from '@/lib/i18n'
 
-export type Theme = 'light' | 'dark'
 export type Lang = 'en' | 'bn'
-
-function getStoredTheme(): Theme {
-  try {
-    if (typeof window === 'undefined') return 'light'
-    const stored = localStorage.getItem('jhs-theme')
-    if (stored === 'dark' || stored === 'light') return stored
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark'
-  } catch {}
-  return 'light'
-}
 
 function getStoredLang(): Lang {
   try {
@@ -26,44 +15,25 @@ function getStoredLang(): Lang {
 }
 
 interface AppState {
-  theme: Theme
   language: Lang
   sidebarOpen: boolean
-  setTheme: (t: Theme) => void
-  toggleTheme: () => void
   setLanguage: (l: Lang) => void
   toggleSidebar: () => void
   setSidebarOpen: (v: boolean) => void
 }
 
-export const useAppStore = create<AppState>((set, get) => {
-  const initialTheme = getStoredTheme()
+export const useAppStore = create<AppState>((set) => {
   const initialLang = getStoredLang()
 
   if (typeof document !== 'undefined') {
-    document.documentElement.classList.toggle('dark', initialTheme === 'dark')
     document.documentElement.lang = initialLang === 'bn' ? 'bn' : 'en'
   }
 
   setLanguage(initialLang)
 
   return {
-    theme: initialTheme,
     language: initialLang,
     sidebarOpen: true,
-
-    setTheme: (theme) => {
-      set({ theme })
-      localStorage.setItem('jhs-theme', theme)
-      document.documentElement.classList.toggle('dark', theme === 'dark')
-    },
-
-    toggleTheme: () => {
-      const next = get().theme === 'light' ? 'dark' : 'light'
-      set({ theme: next })
-      localStorage.setItem('jhs-theme', next)
-      document.documentElement.classList.toggle('dark', next === 'dark')
-    },
 
     setLanguage: (language) => {
       set({ language })

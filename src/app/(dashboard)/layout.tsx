@@ -14,17 +14,12 @@ import { t } from '@/lib/i18n'
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { session, isLoading } = useAuth()
-  const { theme } = useAppStore()
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
   const setSidebarOpen = useAppStore((s) => s.setSidebarOpen)
 
   useEffect(() => {
     if (!isLoading && !session) router.push('/login')
   }, [isLoading, session, router])
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-  }, [theme])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [setSidebarOpen])
   const openSidebar = useCallback(() => setSidebarOpen(true), [setSidebarOpen])

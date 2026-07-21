@@ -1,15 +1,22 @@
 'use client'
 
 import { Sun, Moon } from 'lucide-react'
-import { useAppStore } from '@/store/app-store'
-import { Button } from '@/components/ui/Button'
+import { useTheme } from './ThemeProvider'
 
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useAppStore()
+  const { theme, toggleTheme } = useTheme()
 
   return (
-    <Button variant="ghost" size="sm" onClick={toggleTheme} className="w-9 h-9 p-0">
-      {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-    </Button>
+    <button
+      onClick={toggleTheme}
+      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+    >
+      {theme === 'light' ? (
+        <Sun className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+      ) : (
+        <Moon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+      )}
+    </button>
   )
 }
