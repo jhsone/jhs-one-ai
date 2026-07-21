@@ -46,7 +46,7 @@ export function useChat() {
       .from('conversations')
       .insert({ user_id: session.user.id, title: 'New Chat' })
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) return null
     if (data) {

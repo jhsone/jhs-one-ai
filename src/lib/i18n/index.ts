@@ -42,11 +42,11 @@ export function t(path: string): any {
           return path
         }
       }
-      return typeof fb === 'string' ? fb : path
+      return typeof fb === 'string' || Array.isArray(fb) ? fb : path
     }
   }
 
-  return typeof result === 'string' ? result : path
+  return typeof result === 'string' || Array.isArray(result) ? result : path
 }
 
 export { en, bn }

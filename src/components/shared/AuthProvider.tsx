@@ -29,64 +29,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    const supabase = createClient()
 
-    const init = async () => {
-      try {
-        const supabase = createClient()
-        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession()
+    supabase.auth.getSession().then(({ data: { session: initialSession }, error: sessionError }) => {
+      if (!mounted) return
+      if (sessionError) {
+        setError(sessionError.message)
+        setIsLoading(false)
+        return
+      }
+      setSession(initialSession)
+      setIsLoading(false)
 
-        if (sessionError) {
-          throw sessionError
-        }
-
-        if (mounted) {
-          setSession(initialSession)
-          setIsLoading(false)
-        }
-
-        if (initialSession?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('preferred_lang')
-            .eq('id', initialSession.user.id)
-            .maybeSingle()
-          if (profile?.preferred_lang && mounted) {
-            useAppStore.getState().setLanguage(profile.preferred_lang as Lang)
-          }
-        }
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-          if (mounted) {
-            setSession(newSession)
-            setIsLoading(false)
-          }
-          if (newSession?.user) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('preferred_lang')
-              .eq('id', newSession.user.id)
-              .maybeSingle()
+      if (initialSession?.user) {
+        supabase.from('profiles').select('preferred_lang').eq('id', initialSession.user.id).maybeSingle()
+          .then(({ data: profile }) => {
             if (profile?.preferred_lang && mounted) {
               useAppStore.getState().setLanguage(profile.preferred_lang as Lang)
             }
-          }
-        })
-
-        return () => {
-          subscription.unsubscribe()
-        }
-      } catch (err) {
-        if (mounted) {
-          setError((err as Error).message || 'Auth initialization failed')
-          setIsLoading(false)
-        }
+          })
       }
-    }
+    })
 
-    const cleanup = init()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!mounted) return
+      setSession(newSession)
+      setIsLoading(false)
+
+      if (newSession?.user) {
+        supabase.from('profiles').select('preferred_lang').eq('id', newSession.user.id).maybeSingle()
+          .then(({ data: profile }) => {
+            if (profile?.preferred_lang && mounted) {
+              useAppStore.getState().setLanguage(profile.preferred_lang as Lang)
+            }
+          })
+      }
+    })
+
     return () => {
       mounted = false
-      cleanup.then(fn => fn?.())
+      subscription.unsubscribe()
     }
   }, [])
 
