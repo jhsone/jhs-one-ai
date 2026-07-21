@@ -31,6 +31,17 @@ function pickProvider(activeProviders: ProviderName[]): ProviderName {
   return activeProviders[activeProviders.length - 1]
 }
 
+const PROVIDER_TIMEOUT = 20000
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Provider timed out after ${ms}ms`)), ms)
+    ),
+  ])
+}
+
 const providerOrder: ProviderName[] = ['gemini', 'groq', 'openrouter', 'simbanova']
 
 export async function routeAIRequest(
@@ -51,7 +62,10 @@ export async function routeAIRequest(
 
       if (!bestKey) continue
 
-      const stream = await providerCallbacks[provider](bestKey.key, message, history)
+      const stream = await withTimeout(
+        providerCallbacks[provider](bestKey.key, message, history),
+        PROVIDER_TIMEOUT
+      )
       recordKeyUsage(`${provider}-${bestKey.index}`, true)
 
       return { stream, usedProvider: provider }
