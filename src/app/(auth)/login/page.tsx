@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/shared/AuthProvider'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { t } from '@/lib/i18n'
+import { AiAvatar } from '@/components/shared/AiAvatar'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -46,8 +47,8 @@ export default function LoginPage() {
     <div className="min-h-dvh flex items-center justify-center px-5 bg-gradient-to-b from-white to-gray-50 dark:from-gray-950 dark:to-gray-900">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-5">
-            <Sparkles className="h-7 w-7 text-white" />
+          <div className="inline-flex items-center justify-center mb-5">
+            <AiAvatar size={56} />
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1.5">
             {t('login.title')}

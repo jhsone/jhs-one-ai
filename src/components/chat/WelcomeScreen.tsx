@@ -3,6 +3,7 @@
 import { Sparkles, MessageSquare, Code, BookOpen } from 'lucide-react'
 import { useChat } from '@/lib/hooks/useChat'
 import { t } from '@/lib/i18n'
+import { AiAvatar } from '@/components/shared/AiAvatar'
 
 const iconMap = [Sparkles, MessageSquare, Code, BookOpen]
 
@@ -18,8 +19,8 @@ export function WelcomeScreen() {
   return (
     <div className="flex-1 flex items-center justify-center px-4 sm:px-6 overflow-y-auto">
       <div className="w-full max-w-lg text-center py-8">
-        <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-4 sm:mb-5">
-          <Sparkles className="h-6 sm:h-7 w-6 sm:w-7 text-white" />
+        <div className="inline-flex items-center justify-center mb-4 sm:mb-5">
+          <AiAvatar size={56} />
         </div>
         <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-1.5 sm:mb-2">
           {t('chat.welcome_title')}

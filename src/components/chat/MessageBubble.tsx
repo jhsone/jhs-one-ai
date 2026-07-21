@@ -1,8 +1,9 @@
 'use client'
 
 import { cn } from '@/lib/utils/cn'
-import { User, Bot } from 'lucide-react'
+import { User } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
+import { AiAvatar } from '@/components/shared/AiAvatar'
 import type { Message } from '@/types'
 
 interface MessageBubbleProps {
@@ -19,8 +20,8 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
     <div className={cn('flex gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3', isUser ? 'justify-end' : 'justify-start')}>
       {/* AI avatar */}
       {!isUser && (
-        <div className="flex-shrink-0 mt-0.5 h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          <Bot className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-white" />
+        <div className="flex-shrink-0 mt-0.5">
+          <AiAvatar size={32} />
         </div>
       )}
 

@@ -43,7 +43,7 @@ export function ChatMessages() {
               isStreaming
               streamingContent={streamingContent}
             />
-            {!streamingContent && <ThinkingIndicator className="pl-4 sm:pl-12 pb-4" />}
+            {!streamingContent && <ThinkingIndicator className="pb-4" />}
           </>
         )}
 

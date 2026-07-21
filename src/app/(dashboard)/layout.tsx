@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { LanguageSelector } from '@/components/shared/LanguageSelector'
+import { AiAvatar } from '@/components/shared/AiAvatar'
 import { Menu } from 'lucide-react'
 import { useAppStore } from '@/store/app-store'
 import { useAuth } from '@/components/shared/AuthProvider'
@@ -67,6 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </button>
+            <AiAvatar size={28} />
             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">JHS One Ai</span>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">

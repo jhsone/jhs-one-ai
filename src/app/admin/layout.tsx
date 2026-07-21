@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { LayoutDashboard, Users, MessageSquare, Key, Settings, AlertTriangle, BarChart3, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { t } from '@/lib/i18n'
+import { AiAvatar } from '@/components/shared/AiAvatar'
 
 const navItems = [
   { href: '/admin', labelKey: 'admin.dashboard' as const, icon: LayoutDashboard },
@@ -60,8 +61,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('admin.admin_header')}</h1>
-          <p className="text-xs text-gray-500">{t('admin.company')}</p>
+          <div className="flex items-center gap-2">
+            <AiAvatar size={32} />
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('admin.admin_header')}</h1>
+              <p className="text-xs text-gray-500">{t('admin.company')}</p>
+            </div>
+          </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => (
