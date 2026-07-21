@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { SYSTEM_PROMPT } from '../system-prompt'
 
 export async function callGemini(
   apiKey: string,
@@ -6,7 +7,10 @@ export async function callGemini(
   history: { role: 'user' | 'assistant'; content: string }[]
 ): Promise<ReadableStream> {
   const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    systemInstruction: SYSTEM_PROMPT,
+  })
 
   const chat = model.startChat({
     history: history.map(h => ({

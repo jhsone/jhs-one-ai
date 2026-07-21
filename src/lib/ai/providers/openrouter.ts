@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { SYSTEM_PROMPT } from '../system-prompt'
 
 export async function callOpenRouter(
   apiKey: string,
@@ -13,6 +14,7 @@ export async function callOpenRouter(
   const stream = await client.chat.completions.create({
     model: 'openai/gpt-4o-mini',
     messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
       ...history.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
       { role: 'user', content: message },
     ],
