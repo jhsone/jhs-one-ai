@@ -1,9 +1,8 @@
 'use client'
 
-import { AlertCircle, RefreshCw } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useChatStore } from '@/store/chat-store'
-import { useChat } from '@/lib/hooks/useChat'
 
 interface ErrorBannerProps {
   message: string
@@ -13,14 +12,14 @@ export function ErrorBanner({ message }: ErrorBannerProps) {
   const { setError } = useChatStore()
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 mx-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl mt-2">
-      <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-      <p className="text-sm text-red-700 dark:text-red-300 flex-1">{message}</p>
+    <div className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+      <AlertCircle className="h-4 sm:h-5 w-4 sm:w-5 text-red-500 flex-shrink-0 mt-0.5" />
+      <p className="text-xs sm:text-sm text-red-700 dark:text-red-300 flex-1 min-w-0 break-words">{message}</p>
       <Button
         variant="ghost"
         size="sm"
         onClick={() => setError(null)}
-        className="text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30"
+        className="text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 flex-shrink-0 text-xs sm:text-sm"
       >
         Dismiss
       </Button>

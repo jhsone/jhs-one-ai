@@ -18,12 +18,12 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
   }
 
   return (
-    <div className="relative group mt-2 mb-2">
-      <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 rounded-t-lg px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
-        <span>{language || 'code'}</span>
+    <div className="relative group mt-2 mb-2 -mx-3 sm:mx-0 max-w-[100vw] sm:max-w-none">
+      <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 rounded-t-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs text-gray-500 dark:text-gray-400">
+        <span className="truncate">{language || 'code'}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors flex-shrink-0 ml-2"
         >
           {copied ? (
             <>
@@ -36,7 +36,7 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
           )}
         </button>
       </div>
-      <pre className="bg-gray-50 dark:bg-gray-900 rounded-b-lg p-4 overflow-x-auto text-sm">
+      <pre className="bg-gray-50 dark:bg-gray-900 rounded-b-lg p-3 sm:p-4 overflow-x-auto text-xs sm:text-sm max-w-full">
         <code className={`language-${language || ''}`}>{code}</code>
       </pre>
     </div>

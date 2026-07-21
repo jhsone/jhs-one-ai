@@ -23,8 +23,9 @@ export function ChatMessages() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto py-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      {/* Messages container: full-width on mobile, centered on desktop */}
+      <div className="w-full max-w-3xl mx-auto px-0 sm:px-4">
         {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
@@ -42,11 +43,11 @@ export function ChatMessages() {
               isStreaming
               streamingContent={streamingContent}
             />
-            {!streamingContent && <ThinkingIndicator className="pl-12" />}
+            {!streamingContent && <ThinkingIndicator className="pl-4 sm:pl-12 pb-4" />}
           </>
         )}
 
-        {error && <ErrorBanner message={error} />}
+        {error && <div className="px-3 sm:px-0 pb-2"><ErrorBanner message={error} /></div>}
       </div>
       <div ref={bottomRef} />
     </div>
