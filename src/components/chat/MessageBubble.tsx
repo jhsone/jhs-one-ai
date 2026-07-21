@@ -3,8 +3,11 @@
 import { cn } from '@/lib/utils/cn'
 import { User } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
+import { References } from './References'
 import { AiAvatar } from '@/components/shared/AiAvatar'
+import { parseReferences } from '@/lib/utils/references'
 import type { Message } from '@/types'
+import { useMemo } from 'react'
 
 interface MessageBubbleProps {
   message: Message
@@ -14,18 +17,22 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, isStreaming, streamingContent }: MessageBubbleProps) {
   const isUser = message.role === 'user'
-  const displayContent = isStreaming ? streamingContent || '' : message.content
+  const rawContent = isStreaming ? streamingContent || '' : message.content
+
+  const { cleanContent, references } = useMemo(() => {
+    if (isUser) return { cleanContent: rawContent, references: [] }
+    if (isStreaming) return { cleanContent: rawContent, references: [] }
+    return parseReferences(rawContent)
+  }, [rawContent, isUser, isStreaming])
 
   return (
     <div className={cn('flex gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3', isUser ? 'justify-end' : 'justify-start')}>
-      {/* AI avatar */}
       {!isUser && (
         <div className="flex-shrink-0 mt-0.5">
           <AiAvatar size={32} />
         </div>
       )}
 
-      {/* Message content */}
       <div className={cn(
         'min-w-0',
         isUser ? 'order-1' : 'order-1',
@@ -40,10 +47,13 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
           )}
         >
           {isUser ? (
-            <p className="text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">{displayContent}</p>
+            <p className="text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">{cleanContent}</p>
           ) : (
             <div className="text-sm sm:text-base leading-relaxed">
-              <MarkdownRenderer content={displayContent} />
+              <MarkdownRenderer content={cleanContent} />
+              {!isStreaming && references.length > 0 && (
+                <References references={references} />
+              )}
               {isStreaming && (
                 <span className="inline-block w-1.5 h-4 sm:h-5 bg-blue-500 dark:bg-blue-400 animate-pulse ml-0.5 align-text-bottom" />
               )}
@@ -52,7 +62,6 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
         </div>
       </div>
 
-      {/* User avatar */}
       {isUser && (
         <div className="flex-shrink-0 mt-0.5 h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
           <User className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-gray-600 dark:text-gray-300" />
