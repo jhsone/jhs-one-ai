@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { SearchBar } from './SearchBar'
+import { t } from '@/lib/i18n'
 import { SidebarItem } from './SidebarItem'
 import { UserMenu } from '@/components/shared/UserMenu'
 import { useChat } from '@/lib/hooks/useChat'
@@ -37,7 +38,7 @@ export function Sidebar() {
   return (
     <>
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">History</h2>
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('sidebar.history')}</h2>
         <button
           onClick={handleNewChat}
           className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
@@ -51,7 +52,7 @@ export function Sidebar() {
       <div className="flex-1 overflow-y-auto py-2">
         {filtered.length === 0 ? (
           <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8 px-4">
-            {search ? 'No results found' : 'No conversations yet'}
+            {search ? t('chat.no_results') : t('chat.no_history')}
           </p>
         ) : (
           filtered.map((conv) => (

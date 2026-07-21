@@ -25,7 +25,7 @@ export function getCurrentLanguage(): Lang {
   return currentLang
 }
 
-export function t(path: string): string {
+export function t(path: string): any {
   const keys = path.split('.')
   let result: any = translations[currentLang]
 

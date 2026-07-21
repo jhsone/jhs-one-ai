@@ -3,6 +3,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Session } from '@supabase/supabase-js'
+import { useAppStore } from '@/store/app-store'
+import type { Lang } from '@/store/app-store'
 
 interface AuthContextValue {
   session: Session | null
@@ -42,10 +44,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsLoading(false)
         }
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        if (initialSession?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('preferred_lang')
+            .eq('id', initialSession.user.id)
+            .single()
+          if (profile?.preferred_lang && mounted) {
+            const lang = profile.preferred_lang as Lang
+            useAppStore.getState().setLanguage(lang)
+          }
+        }
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
           if (mounted) {
             setSession(newSession)
             setIsLoading(false)
+          }
+          if (newSession?.user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('preferred_lang')
+              .eq('id', newSession.user.id)
+              .single()
+            if (profile?.preferred_lang && mounted) {
+              const lang = profile.preferred_lang as Lang
+              useAppStore.getState().setLanguage(lang)
+            }
           }
         })
 

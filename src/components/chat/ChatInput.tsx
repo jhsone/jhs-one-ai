@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Send, Square } from 'lucide-react'
 import { useChatStore } from '@/store/chat-store'
 import { useChat } from '@/lib/hooks/useChat'
+import { t } from '@/lib/i18n'
 
 export function ChatInput() {
   const [input, setInput] = useState('')
@@ -41,7 +42,7 @@ export function ChatInput() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            placeholder={t('chat.placeholder')}
             rows={1}
             className="flex-1 bg-transparent resize-none outline-none text-sm sm:text-base text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 py-1.5 max-h-[120px] leading-5"
             disabled={isStreaming}
@@ -64,7 +65,7 @@ export function ChatInput() {
           )}
         </div>
         <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1.5">
-          JHS One Ai may produce inaccurate information
+          {t('chat.disclaimer')}
         </p>
       </div>
     </div>

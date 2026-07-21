@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { formatDate } from '@/lib/utils/format'
 import { createClient } from '@/lib/supabase/client'
 import { AlertTriangle } from 'lucide-react'
+import { t } from '@/lib/i18n'
 
 export default function AdminErrorLogsPage() {
   const [logs, setLogs] = useState<any[]>([])
@@ -33,24 +34,24 @@ export default function AdminErrorLogsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error Logs</h2>
-        <Badge variant="danger">{logs.length} errors</Badge>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('admin.error_logs_heading')}</h2>
+        <Badge variant="danger">{logs.length} {t('admin.errors')}</Badge>
       </div>
 
       <Card>
         {logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
             <AlertTriangle className="h-12 w-12 mb-3" />
-            <p>No errors logged. All providers are healthy!</p>
+            <p>{t('admin.no_errors')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800">
-                  <th className="text-left py-3 px-4 text-gray-500">Provider</th>
-                  <th className="text-left py-3 px-4 text-gray-500">Error</th>
-                  <th className="text-left py-3 px-4 text-gray-500">Time</th>
+                  <th className="text-left py-3 px-4 text-gray-500">{t('admin.provider')}</th>
+                  <th className="text-left py-3 px-4 text-gray-500">{t('admin.error')}</th>
+                  <th className="text-left py-3 px-4 text-gray-500">{t('admin.time')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -60,7 +61,7 @@ export default function AdminErrorLogsPage() {
                       <Badge variant="danger" className="capitalize">{log.provider}</Badge>
                     </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400 max-w-md truncate">
-                      {log.error_message || 'Unknown error'}
+                      {log.error_message || t('admin.unknown_error')}
                     </td>
                     <td className="py-3 px-4 text-gray-500 whitespace-nowrap">{formatDate(log.created_at)}</td>
                   </tr>

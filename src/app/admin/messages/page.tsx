@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils/format'
+import { t } from '@/lib/i18n'
 
 export default function AdminMessagesPage() {
   const [stats, setStats] = useState<any>(null)
@@ -31,25 +32,25 @@ export default function AdminMessagesPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Messages</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('admin.messages_heading')}</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
-          <p className="text-sm text-gray-500">Total Messages</p>
+          <p className="text-sm text-gray-500">{t('admin.total')}</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{(stats?.total || 0).toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-sm text-gray-500">Today</p>
+          <p className="text-sm text-gray-500">{t('admin.today')}</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats?.today || 0}</p>
         </Card>
         <Card>
-          <p className="text-sm text-gray-500">Avg / Day</p>
+          <p className="text-sm text-gray-500">{t('admin.avg_per_day')}</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {stats?.total ? Math.round(stats.total / 30) : 0}
           </p>
         </Card>
       </div>
       <Card>
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Recent Messages</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('admin.recent_messages')}</h3>
         <div className="space-y-2">
           {(stats?.recent || []).slice(0, 10).map((m: any) => (
             <div key={m.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900">

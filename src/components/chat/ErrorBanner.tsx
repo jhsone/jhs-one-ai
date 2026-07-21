@@ -3,6 +3,7 @@
 import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useChatStore } from '@/store/chat-store'
+import { t } from '@/lib/i18n'
 
 interface ErrorBannerProps {
   message: string
@@ -21,7 +22,7 @@ export function ErrorBanner({ message }: ErrorBannerProps) {
         onClick={() => setError(null)}
         className="text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 flex-shrink-0 text-xs sm:text-sm"
       >
-        Dismiss
+        {t('chat.dismiss')}
       </Button>
     </div>
   )

@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { useRouter } from 'next/navigation'
 import { t } from '@/lib/i18n'
-import { useAppStore } from '@/store/app-store'
 
 interface UserMenuProps {
   email: string
@@ -15,7 +14,7 @@ interface UserMenuProps {
 
 export function UserMenu({ email, avatarUrl, displayName }: UserMenuProps) {
   const router = useRouter()
-  const { language } = useAppStore()
+
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -36,7 +35,7 @@ export function UserMenu({ email, avatarUrl, displayName }: UserMenuProps) {
         )}
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-            {displayName || 'User'}
+            {displayName || t('sidebar.user_label')}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{email}</p>
         </div>

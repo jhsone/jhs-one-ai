@@ -72,4 +72,6 @@ export interface DashboardStats {
   total_conversations: number
   active_today: number
   messages_today: number
+  provider_count?: number
+  total_keys?: number
 }

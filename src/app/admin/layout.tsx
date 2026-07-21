@@ -6,15 +6,16 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { LayoutDashboard, Users, MessageSquare, Key, Settings, AlertTriangle, BarChart3, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { t } from '@/lib/i18n'
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
-  { href: '/admin/providers', label: 'Providers', icon: BarChart3 },
-  { href: '/admin/keys', label: 'API Keys', icon: Key },
-  { href: '/admin/error-logs', label: 'Error Logs', icon: AlertTriangle },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin', labelKey: 'admin.dashboard' as const, icon: LayoutDashboard },
+  { href: '/admin/users', labelKey: 'admin.users' as const, icon: Users },
+  { href: '/admin/messages', labelKey: 'admin.messages' as const, icon: MessageSquare },
+  { href: '/admin/providers', labelKey: 'admin.providers' as const, icon: BarChart3 },
+  { href: '/admin/keys', labelKey: 'admin.keys' as const, icon: Key },
+  { href: '/admin/error-logs', labelKey: 'admin.error_logs' as const, icon: AlertTriangle },
+  { href: '/admin/settings', labelKey: 'admin.settings' as const, icon: Settings },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -59,8 +60,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">JHS Admin</h1>
-          <p className="text-xs text-gray-500">JH Soft Corporation</p>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('admin.admin_header')}</h1>
+          <p className="text-xs text-gray-500">{t('admin.company')}</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => (
@@ -75,7 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               )}
             >
               <item.icon className="h-4 w-4" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           ))}
         </nav>
@@ -85,7 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
           >
             <LogOut className="h-4 w-4" />
-            Back to Chat
+            {t('admin.back_to_chat')}
           </Link>
         </div>
       </aside>

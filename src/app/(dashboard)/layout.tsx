@@ -4,11 +4,12 @@ import { useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
-import { LanguageToggle } from '@/components/shared/LanguageToggle'
+import { LanguageSelector } from '@/components/shared/LanguageSelector'
 import { Menu } from 'lucide-react'
 import { useAppStore } from '@/store/app-store'
 import { useAuth } from '@/components/shared/AuthProvider'
 import { Loader2 } from 'lucide-react'
+import { t } from '@/lib/i18n'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -67,14 +68,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={openSidebar}
               className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden flex-shrink-0"
-              aria-label="Open menu"
+              aria-label={t('app.open_menu')}
             >
               <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </button>
             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">JHS One Ai</span>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <LanguageToggle />
+            <LanguageSelector />
             <ThemeToggle />
           </div>
         </header>

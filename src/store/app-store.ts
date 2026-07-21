@@ -42,7 +42,10 @@ export const useAppStore = create<AppState>((set, get) => {
 
   if (typeof document !== 'undefined') {
     document.documentElement.classList.toggle('dark', initialTheme === 'dark')
+    document.documentElement.lang = initialLang === 'bn' ? 'bn' : 'en'
   }
+
+  setLanguage(initialLang)
 
   return {
     theme: initialTheme,
@@ -65,6 +68,7 @@ export const useAppStore = create<AppState>((set, get) => {
     setLanguage: (language) => {
       set({ language })
       localStorage.setItem('jhs-lang', language)
+      document.documentElement.lang = language === 'bn' ? 'bn' : 'en'
       setLanguage(language)
     },
 

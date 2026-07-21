@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Key, CheckCircle, XCircle } from 'lucide-react'
+import { t } from '@/lib/i18n'
 
 export default function AdminKeysPage() {
   const [data, setData] = useState<any>(null)
@@ -24,8 +25,8 @@ export default function AdminKeysPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">API Keys</h2>
-      <p className="text-sm text-gray-500">Total: 27 keys configured across 4 providers</p>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('admin.api_keys_label')}</h2>
+      <p className="text-sm text-gray-500">{t('admin.key_summary')}: 27 {t('admin.configured')}</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {providers.map(provider => {
@@ -38,7 +39,7 @@ export default function AdminKeysPage() {
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100 capitalize">{provider}</h3>
                 </div>
                 <Badge variant={stats.active === stats.total ? 'success' : 'warning'}>
-                  {stats.active}/{stats.total} Active
+                  {stats.active}/{stats.total} {t('admin.enabled')}
                 </Badge>
               </div>
               <div className="space-y-1.5">
@@ -56,7 +57,7 @@ export default function AdminKeysPage() {
                           {provider.toUpperCase()} KEY #{i + 1}
                         </span>
                       </div>
-                      <span className="text-xs text-gray-400">{isActive ? 'Configured' : 'Missing'}</span>
+                      <span className="text-xs text-gray-400">{isActive ? t('admin.configured') : t('admin.no_data')}</span>
                     </div>
                   )
                 })}
