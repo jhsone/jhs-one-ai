@@ -31,7 +31,7 @@ function pickProvider(activeProviders: ProviderName[]): ProviderName {
   return activeProviders[activeProviders.length - 1]
 }
 
-const PROVIDER_TIMEOUT = 20000
+const PROVIDER_TIMEOUT = 8000
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([

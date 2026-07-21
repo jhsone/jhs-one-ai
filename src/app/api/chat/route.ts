@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { routeAIRequest, getActiveProviders } from '@/lib/ai/router'
+import { routeAIRequest } from '@/lib/ai/router'
 import type { ChatRequest, ProviderName } from '@/types'
 
 export async function POST(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       .from('app_settings')
       .select('value')
       .eq('key', 'active_providers')
-      .single()
+      .maybeSingle()
 
     let activeProviders: ProviderName[] | undefined
     if (settings?.value) {
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     return new Response(
-      JSON.stringify({ type: 'error', content: (err as Error).message }),
+      JSON.stringify({ type: 'error', content: (err as Error).message || 'Something went wrong' }),
       { status: 500 }
     )
   }
