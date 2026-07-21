@@ -4,8 +4,10 @@ import { cn } from '@/lib/utils/cn'
 import { User } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { References } from './References'
+import { RichResponse } from './RichResponse'
 import { AiAvatar } from '@/components/shared/AiAvatar'
 import { parseReferences } from '@/lib/utils/references'
+import { parseRichResponse } from '@/lib/utils/rich-response'
 import type { Message } from '@/types'
 import { useMemo } from 'react'
 
@@ -19,10 +21,16 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
   const isUser = message.role === 'user'
   const rawContent = isStreaming ? streamingContent || '' : message.content
 
-  const { cleanContent, references } = useMemo(() => {
-    if (isUser) return { cleanContent: rawContent, references: [] }
-    if (isStreaming) return { cleanContent: rawContent, references: [] }
-    return parseReferences(rawContent)
+  const { cleanContent, references, richResponse } = useMemo(() => {
+    if (isUser) return { cleanContent: rawContent, references: [], richResponse: null }
+    if (isStreaming) return { cleanContent: rawContent, references: [], richResponse: null }
+    const rr = parseRichResponse(rawContent)
+    if (rr) {
+      const { cleanContent: refClean, references: refs } = parseReferences(rr.content)
+      return { cleanContent: refClean, references: refs, richResponse: rr }
+    }
+    const { cleanContent: cc, references: refs } = parseReferences(rawContent)
+    return { cleanContent: cc, references: refs, richResponse: null }
   }, [rawContent, isUser, isStreaming])
 
   return (
@@ -43,14 +51,20 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
             'rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5',
             isUser
               ? 'bg-blue-600 text-white rounded-br-sm'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-sm'
+              : richResponse
+                ? 'bg-white dark:bg-gray-900 rounded-bl-sm shadow-sm border border-gray-200 dark:border-gray-800'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-sm'
           )}
         >
           {isUser ? (
             <p className="text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">{cleanContent}</p>
           ) : (
-            <div className="text-sm sm:text-base leading-relaxed">
-              <MarkdownRenderer content={cleanContent} />
+            <div className={richResponse ? '' : 'text-sm sm:text-base leading-relaxed'}>
+              {richResponse ? (
+                <RichResponse data={richResponse} />
+              ) : (
+                <MarkdownRenderer content={cleanContent} />
+              )}
               {!isStreaming && references.length > 0 && (
                 <References references={references} />
               )}

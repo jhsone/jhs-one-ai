@@ -1,11 +1,68 @@
 'use client'
 
+import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { CodeBlock } from './CodeBlock'
 
 interface MarkdownRendererProps {
   content: string
+}
+
+const ALERT_TYPES = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'] as const
+
+function findAlertType(nodes: React.ReactNode[]): string | null {
+  for (const node of nodes) {
+    if (typeof node === 'string') {
+      const m = node.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i)
+      if (m) return m[1].toLowerCase()
+    }
+    if (React.isValidElement<{children?: React.ReactNode}>(node) && node.props.children) {
+      const found = findAlertType(React.Children.toArray(node.props.children))
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function removeMarker(nodes: React.ReactNode[]): React.ReactNode[] {
+  return nodes.flatMap(node => {
+    if (typeof node === 'string') {
+      return node.replace(/^\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i, '')
+    }
+    if (React.isValidElement<{children?: React.ReactNode}>(node) && node.props.children) {
+      const childArr = React.Children.toArray(node.props.children)
+      return React.cloneElement(node, {
+        ...node.props,
+        children: childArr.length === 1 ? removeMarker(childArr)[0] : removeMarker(childArr),
+      })
+    }
+    return node
+  })
+}
+
+const alertLabels: Record<string, string> = {
+  note: 'Note',
+  tip: 'Tip',
+  important: 'Important',
+  warning: 'Warning',
+  caution: 'Caution',
+}
+
+const alertStyles: Record<string, string> = {
+  note: 'border-blue-500 bg-blue-50 dark:bg-blue-950/30',
+  tip: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30',
+  important: 'border-purple-500 bg-purple-50 dark:bg-purple-950/30',
+  warning: 'border-amber-500 bg-amber-50 dark:bg-amber-950/30',
+  caution: 'border-red-500 bg-red-50 dark:bg-red-950/30',
+}
+
+const alertTextColors: Record<string, string> = {
+  note: 'text-blue-800 dark:text-blue-200',
+  tip: 'text-emerald-800 dark:text-emerald-200',
+  important: 'text-purple-800 dark:text-purple-200',
+  warning: 'text-amber-800 dark:text-amber-200',
+  caution: 'text-red-800 dark:text-red-200',
 }
 
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
@@ -68,6 +125,17 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
             )
           },
           blockquote({ children, ...props }) {
+            const childrenArr = React.Children.toArray(children)
+            const alertType = findAlertType(childrenArr)
+            if (alertType) {
+              const cleaned = removeMarker(childrenArr)
+              return (
+                <div className={`border-l-4 ${alertStyles[alertType]} rounded-r-lg p-3 my-3 ${alertTextColors[alertType]}`}>
+                  <p className="font-semibold text-sm mb-1">{alertLabels[alertType]}</p>
+                  {cleaned}
+                </div>
+              )
+            }
             return (
               <blockquote className="border-l-3 border-blue-500 dark:border-blue-400 pl-4 py-1 my-2 text-gray-600 dark:text-gray-400 italic" {...props}>
                 {children}
