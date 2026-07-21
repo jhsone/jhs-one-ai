@@ -1,17 +1,44 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { LanguageToggle } from '@/components/shared/LanguageToggle'
 import { useAppStore } from '@/store/app-store'
+import { useAuth } from '@/components/shared/AuthProvider'
+import { Loader2 } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { theme, setTheme } = useAppStore()
+  const router = useRouter()
+  const { session, isLoading } = useAuth()
+  const { theme } = useAppStore()
+
+  useEffect(() => {
+    if (!isLoading && !session) {
+      router.push('/login')
+    }
+  }, [isLoading, session, router])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-white dark:bg-gray-950">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="h-full flex items-center justify-center bg-white dark:bg-gray-950">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex bg-white dark:bg-gray-950">

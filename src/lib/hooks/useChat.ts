@@ -3,27 +3,28 @@
 import { useCallback, useRef } from 'react'
 import { useChatStore } from '@/store/chat-store'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/components/shared/AuthProvider'
 import type { Message } from '@/types'
 
 export function useChat() {
   const store = useChatStore()
   const abortRef = useRef<AbortController | null>(null)
+  const { session } = useAuth()
 
   const loadConversations = useCallback(async () => {
+    if (!session?.user) return
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
     const { data } = await supabase
       .from('conversations')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .order('updated_at', { ascending: false })
 
     if (data) store.setConversations(data)
-  }, [store])
+  }, [store, session])
 
   const loadMessages = useCallback(async (conversationId: string) => {
+    if (!session?.user) return
     const supabase = createClient()
     const { data } = await supabase
       .from('messages')
@@ -35,16 +36,15 @@ export function useChat() {
       store.setMessages(data as Message[])
       store.setCurrentConversation(conversationId)
     }
-  }, [store])
+  }, [store, session])
 
   const createConversation = useCallback(async (): Promise<string | null> => {
+    if (!session?.user) return null
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
 
     const { data, error } = await supabase
       .from('conversations')
-      .insert({ user_id: user.id, title: 'New Chat' })
+      .insert({ user_id: session.user.id, title: 'New Chat' })
       .select()
       .single()
 
@@ -56,12 +56,11 @@ export function useChat() {
       return data.id
     }
     return null
-  }, [store])
+  }, [store, session])
 
   const sendMessage = useCallback(async (content: string) => {
+    if (!session?.user) return
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
 
     let convId = store.currentConversationId
     if (!convId) {
@@ -169,7 +168,7 @@ export function useChat() {
       }
       store.setIsStreaming(false)
     }
-  }, [store, createConversation])
+  }, [store, createConversation, session])
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort()

@@ -7,26 +7,20 @@ import { SidebarItem } from './SidebarItem'
 import { UserMenu } from '@/components/shared/UserMenu'
 import { useChat } from '@/lib/hooks/useChat'
 import { useAppStore } from '@/store/app-store'
+import { useAuth } from '@/components/shared/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-import { cn } from '@/lib/utils/cn'
 
 export function Sidebar() {
   const [search, setSearch] = useState('')
-  const [user, setUser] = useState<{ email: string; avatar_url?: string | null; display_name?: string | null } | null>(null)
+  const { session } = useAuth()
   const { conversations, currentConversationId, loadConversations, loadMessages, createConversation, removeConversation, updateConversation } = useChat()
   const { sidebarOpen, setSidebarOpen } = useAppStore()
 
   useEffect(() => {
-    const init = async () => {
-      const supabase = createClient()
-      const { data: { user: u } } = await supabase.auth.getUser()
-      if (u) {
-        setUser({ email: u.email!, avatar_url: u.user_metadata?.avatar_url, display_name: u.user_metadata?.full_name })
-        loadConversations()
-      }
+    if (session?.user) {
+      loadConversations()
     }
-    init()
-  }, [loadConversations])
+  }, [session, loadConversations])
 
   const filtered = conversations.filter((c) =>
     c.title.toLowerCase().includes(search.toLowerCase())
@@ -101,7 +95,13 @@ export function Sidebar() {
       </div>
 
       <div className="border-t border-gray-200 dark:border-gray-800">
-        {user && <UserMenu email={user.email} avatarUrl={user.avatar_url} displayName={user.display_name} />}
+        {session?.user && (
+          <UserMenu
+            email={session.user.email!}
+            avatarUrl={session.user.user_metadata?.avatar_url}
+            displayName={session.user.user_metadata?.full_name}
+          />
+        )}
       </div>
     </div>
   )

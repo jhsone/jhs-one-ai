@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/components/shared/AuthProvider";
 
 export const metadata: Metadata = {
   title: "JHS One Ai — by JH Soft Corporation",
@@ -17,7 +18,11 @@ export default function RootLayout({
       suppressHydrationWarning
       className="h-full antialiased"
     >
-      <body className="h-full font-sans">{children}</body>
+      <body className="h-full font-sans">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

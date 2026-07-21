@@ -3,23 +3,49 @@
 import { useState } from 'react'
 import { Sparkles, ArrowRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/components/shared/AuthProvider'
 
 export function Hero() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const { session, isLoading, error: authError } = useAuth()
+  const [navigating, setNavigating] = useState(false)
 
   const handleClick = async () => {
-    setLoading(true)
-    const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    setNavigating(true)
+
+    if (isLoading) {
+      return
+    }
 
     if (session) {
       router.push('/chat')
     } else {
       router.push('/login')
     }
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-b from-white to-gray-50 dark:from-gray-950 dark:to-gray-900">
+        <div className="max-w-md text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/30 mb-6">
+            <Sparkles className="h-8 w-8 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Configuration Required</h1>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            Supabase environment variables are not configured. Please set:
+          </p>
+          <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-sm text-left mb-4">
+            NEXT_PUBLIC_SUPABASE_URL<br />
+            NEXT_PUBLIC_SUPABASE_ANON_KEY
+          </code>
+          <p className="text-sm text-gray-400">
+            Add these to your Vercel Environment Variables and redeploy.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -47,11 +73,14 @@ export function Hero() {
         <Button
           size="lg"
           onClick={handleClick}
-          disabled={loading}
+          disabled={navigating || isLoading}
           className="text-base px-8 py-3 rounded-xl"
         >
-          {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+          {navigating || isLoading ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              Loading...
+            </>
           ) : (
             <>
               Get Started Free
