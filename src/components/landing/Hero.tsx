@@ -1,22 +1,25 @@
 'use client'
 
-import { Sparkles, ArrowRight } from 'lucide-react'
+import { useState } from 'react'
+import { Sparkles, ArrowRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export function Hero() {
   const router = useRouter()
+  const [loading, setLoading] = useState(false)
 
-  const handleSignIn = async () => {
+  const handleClick = async () => {
+    setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    if (error) console.error(error)
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (session) {
+      router.push('/chat')
+    } else {
+      router.push('/login')
+    }
   }
 
   return (
@@ -41,9 +44,20 @@ export function Hero() {
           Smart, fast, and always available.
         </p>
 
-        <Button size="lg" onClick={handleSignIn} className="text-base px-8 py-3 rounded-xl">
-          Get Started Free
-          <ArrowRight className="ml-2 h-5 w-5" />
+        <Button
+          size="lg"
+          onClick={handleClick}
+          disabled={loading}
+          className="text-base px-8 py-3 rounded-xl"
+        >
+          {loading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <>
+              Get Started Free
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </>
+          )}
         </Button>
 
         <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl mx-auto">
