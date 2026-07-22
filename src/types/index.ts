@@ -53,6 +53,12 @@ export interface ProviderLog {
   response_time_ms: number | null
   tokens_used: number | null
   error_message: string | null
+  fallback_provider: string | null
+  retry_count: number | null
+  health_score: number | null
+  api_key_index: number | null
+  vision_enabled: boolean | null
+  attachment_count: number | null
   created_at: string
 }
 
@@ -98,6 +104,7 @@ export interface ChatRequest {
   message: string
   conversation_id: string | null
   history: { role: 'user' | 'assistant'; content: string }[]
+  attachment_ids?: string[]
 }
 
 export interface StreamChunk {

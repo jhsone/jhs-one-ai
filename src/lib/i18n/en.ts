@@ -146,6 +146,7 @@ export const en = {
     settings: 'Settings',
     error_logs: 'Error Logs',
     provider_health: 'Provider Health',
+    vision: 'Vision Engine',
     attachments: 'Attachments',
     total_users: 'Total Users',
     total_messages: 'Total Messages',

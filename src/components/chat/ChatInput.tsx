@@ -125,9 +125,9 @@ export function ChatInput() {
     setInput('')
     clearPendingAttachments()
 
-    if (trimmed) {
-      try { await sendMessage(trimmed) } catch {}
-    }
+    try {
+      await sendMessage(trimmed || ' ', attachmentIds?.length ? attachmentIds : undefined)
+    } catch {}
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

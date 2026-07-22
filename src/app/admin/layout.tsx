@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { LayoutDashboard, Users, MessageSquare, Key, Settings, AlertTriangle, BarChart3, Activity, Paperclip, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Users, MessageSquare, Key, Settings, AlertTriangle, BarChart3, Activity, Paperclip, Eye, LogOut, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { t } from '@/lib/i18n'
 import { AiAvatar } from '@/components/shared/AiAvatar'
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/admin/messages', labelKey: 'admin.messages' as const, icon: MessageSquare },
   { href: '/admin/providers', labelKey: 'admin.providers' as const, icon: BarChart3 },
   { href: '/admin/provider-health', labelKey: 'admin.provider_health' as const, icon: Activity },
+  { href: '/admin/vision', labelKey: 'admin.vision' as const, icon: Eye },
   { href: '/admin/keys', labelKey: 'admin.keys' as const, icon: Key },
   { href: '/admin/attachments', labelKey: 'admin.attachments' as const, icon: Paperclip },
   { href: '/admin/error-logs', labelKey: 'admin.error_logs' as const, icon: AlertTriangle },

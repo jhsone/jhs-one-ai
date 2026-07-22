@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body: ChatRequest = await req.json()
-    const { message, conversation_id } = body
+    const { message, conversation_id, attachment_ids } = body
 
     if (!message || !conversation_id) {
       return new Response(JSON.stringify({ error: 'Message and conversation_id required' }), { status: 400 })
@@ -32,7 +32,30 @@ export async function POST(req: NextRequest) {
 
     const history = body.history || []
 
-    const { stream, usedProvider, usedModel, usedKeyIndex, fallbackProvider, retryCount, healthScore } = await routeAIRequest(message, history, activeProviders)
+    let attachments: any[] | undefined
+    if (attachment_ids && attachment_ids.length > 0) {
+      const { data: attRecords } = await supabase
+        .from('attachments')
+        .select('*')
+        .in('id', attachment_ids)
+        .eq('user_id', user.id)
+
+      if (attRecords) {
+        attachments = attRecords.map(a => ({
+          id: a.id,
+          cloudinaryUrl: a.cloudinary_url,
+          thumbnailUrl: a.thumbnail_url,
+          mimeType: a.mime_type,
+          fileType: a.file_type,
+          fileName: a.file_name,
+          fileSize: a.file_size,
+          width: a.width,
+          height: a.height,
+        }))
+      }
+    }
+
+    const { stream, usedProvider, usedModel, usedKeyIndex, fallbackProvider, retryCount, healthScore, visionEnabled, attachmentCount } = await routeAIRequest(message, history, activeProviders, attachments)
 
     const startTime = Date.now()
 
@@ -74,6 +97,8 @@ export async function POST(req: NextRequest) {
             fallback_provider: fallbackProvider,
             retry_count: retryCount,
             health_score: healthScore,
+            vision_enabled: visionEnabled,
+            attachment_count: attachmentCount,
           })
 
           controller.close()
@@ -91,6 +116,8 @@ export async function POST(req: NextRequest) {
             fallback_provider: fallbackProvider,
             retry_count: retryCount,
             health_score: healthScore,
+            vision_enabled: visionEnabled,
+            attachment_count: attachmentCount,
           })
 
           const encoder2 = new TextEncoder()

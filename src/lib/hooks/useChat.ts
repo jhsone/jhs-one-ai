@@ -58,7 +58,7 @@ export function useChat() {
     return null
   }, [store, session])
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, attachmentIds?: string[]) => {
     if (!session?.user) return
     const supabase = createClient()
 
@@ -97,7 +97,12 @@ export function useChat() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content, conversation_id: convId, history }),
+        body: JSON.stringify({
+          message: content,
+          conversation_id: convId,
+          history,
+          attachment_ids: attachmentIds?.length ? attachmentIds : undefined,
+        }),
         signal: abortRef.current.signal,
       })
 

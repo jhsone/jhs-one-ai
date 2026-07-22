@@ -146,6 +146,7 @@ export const bn: Record<string, any> = {
     settings: 'সেটিংস',
     error_logs: 'ত্রুটি লগ',
     provider_health: 'প্রদানকারীর স্বাস্থ্য',
+    vision: 'ভিশন ইঞ্জিন',
     attachments: 'সংযুক্তি',
     total_users: 'মোট ব্যবহারকারী',
     total_messages: 'মোট বার্তা',
