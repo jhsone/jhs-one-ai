@@ -58,7 +58,28 @@ export interface ProviderLog {
   health_score: number | null
   api_key_index: number | null
   vision_enabled: boolean | null
+  document_enabled: boolean | null
   attachment_count: number | null
+  pages_processed: number | null
+  text_length: number | null
+  ocr_used: boolean | null
+  parser_used: string | null
+  created_at: string
+}
+
+export interface DocumentLog {
+  id: number
+  attachment_id: string
+  user_id: string
+  document_type: string
+  parser_used: string
+  ocr_used: boolean
+  pages_processed: number
+  text_length: number
+  language: string | null
+  success: boolean
+  error_message: string | null
+  processing_time: number
   created_at: string
 }
 

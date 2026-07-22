@@ -2,12 +2,21 @@ import type { ProviderName } from '@/types'
 import { providerRouter } from '@/lib/providerRouter'
 import { visionEngine, hasImageAttachments } from '@/lib/vision'
 import type { VisionAttachment } from '@/lib/vision'
+import type { DocumentAttachment, ParserResult } from '@/lib/document'
+import { documentEngine } from '@/lib/document'
+
+export interface RouteOptions {
+  attachments?: VisionAttachment[]
+  documentAttachments?: DocumentAttachment[]
+  documentResults?: ParserResult[]
+  useVision?: boolean
+}
 
 export async function routeAIRequest(
   message: string,
   history: { role: 'user' | 'assistant'; content: string }[],
   activeProviders?: ProviderName[],
-  attachments?: VisionAttachment[]
+  options?: RouteOptions
 ): Promise<{
   stream: ReadableStream
   usedProvider: ProviderName
@@ -17,9 +26,43 @@ export async function routeAIRequest(
   retryCount: number
   healthScore: number
   visionEnabled: boolean
+  documentEnabled: boolean
   attachmentCount: number
+  pagesProcessed: number
+  textLength: number
+  ocrUsed: boolean
+  parserUsed: string
 }> {
-  if (attachments && attachments.length > 0 && hasImageAttachments(attachments)) {
+  const attachments = options?.attachments
+  const documentAttachments = options?.documentAttachments
+  const documentResults = options?.documentResults
+  const useVision = options?.useVision ?? true
+
+  if (documentAttachments && documentResults && documentAttachments.length > 0) {
+    const context = documentEngine.buildContext(message, history, documentResults, documentAttachments)
+    const summary = documentEngine.getSummary(documentResults)
+
+    const result = await providerRouter.route(context.augmentedMessage, history, activeProviders)
+
+    return {
+      stream: result.stream,
+      usedProvider: result.usedProvider,
+      usedModel: result.usedModel,
+      usedKeyIndex: result.usedKeyIndex,
+      fallbackProvider: result.fallbackProvider,
+      retryCount: result.retryCount,
+      healthScore: result.healthScore,
+      visionEnabled: false,
+      documentEnabled: true,
+      attachmentCount: documentAttachments.length,
+      pagesProcessed: summary.totalPages,
+      textLength: summary.totalTextLength,
+      ocrUsed: summary.ocrUsed,
+      parserUsed: summary.parsersUsed.join(','),
+    }
+  }
+
+  if (attachments && attachments.length > 0 && hasImageAttachments(attachments) && useVision) {
     const visionResult = await visionEngine.process(message, history, attachments, activeProviders)
 
     const usedProvider = visionResult.usedProvider as ProviderName
@@ -33,7 +76,12 @@ export async function routeAIRequest(
       retryCount: visionResult.retryCount,
       healthScore: 100,
       visionEnabled: true,
+      documentEnabled: false,
       attachmentCount: attachments.length,
+      pagesProcessed: 0,
+      textLength: 0,
+      ocrUsed: false,
+      parserUsed: '',
     }
   }
 
@@ -48,7 +96,12 @@ export async function routeAIRequest(
     retryCount: result.retryCount,
     healthScore: result.healthScore,
     visionEnabled: false,
+    documentEnabled: false,
     attachmentCount: attachments?.length ?? 0,
+    pagesProcessed: 0,
+    textLength: 0,
+    ocrUsed: false,
+    parserUsed: '',
   }
 }
 

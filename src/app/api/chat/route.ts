@@ -1,7 +1,11 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { routeAIRequest } from '@/lib/ai/router'
+import { documentEngine } from '@/lib/document'
+import { detectDocumentType, isImageType } from '@/lib/document'
 import type { ChatRequest, ProviderName } from '@/types'
+import type { DocumentAttachment } from '@/lib/document'
+import type { VisionAttachment } from '@/lib/vision'
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +36,8 @@ export async function POST(req: NextRequest) {
 
     const history = body.history || []
 
-    let attachments: any[] | undefined
+    let routeOptions: Parameters<typeof routeAIRequest>[3] = {}
+
     if (attachment_ids && attachment_ids.length > 0) {
       const { data: attRecords } = await supabase
         .from('attachments')
@@ -40,8 +45,8 @@ export async function POST(req: NextRequest) {
         .in('id', attachment_ids)
         .eq('user_id', user.id)
 
-      if (attRecords) {
-        attachments = attRecords.map(a => ({
+      if (attRecords && attRecords.length > 0) {
+        const allAttachments: DocumentAttachment[] = attRecords.map(a => ({
           id: a.id,
           cloudinaryUrl: a.cloudinary_url,
           thumbnailUrl: a.thumbnail_url,
@@ -52,17 +57,94 @@ export async function POST(req: NextRequest) {
           width: a.width,
           height: a.height,
         }))
+
+        const documentAttachments = allAttachments.filter(a => {
+          const type = detectDocumentType(a.mimeType, a.fileName)
+          return !isImageType(type)
+        })
+
+        const imageAttachments = allAttachments.filter(a => {
+          const type = detectDocumentType(a.mimeType, a.fileName)
+          return isImageType(type)
+        })
+
+        const visionAttachments: VisionAttachment[] = imageAttachments
+
+        const useDocumentEngine = documentEngine.hasDocuments(documentAttachments) ||
+          (imageAttachments.length > 0 && documentAttachments.length > 0)
+
+        if (useDocumentEngine) {
+          const docsToProcess = documentAttachments.length > 0
+            ? documentAttachments
+            : imageAttachments
+
+          const documentResults = await documentEngine.processAttachments(docsToProcess)
+
+          for (let i = 0; i < documentResults.length; i++) {
+            const result = documentResults[i]
+            const attachment = docsToProcess[i]
+
+            if (result.success && result.fullText) {
+              await supabase
+                .from('attachments')
+                .update({
+                  context_text: result.fullText,
+                  page_count: result.pagesProcessed,
+                })
+                .eq('id', attachment.id)
+            }
+
+            await supabase.from('document_logs').insert({
+              attachment_id: attachment.id,
+              user_id: user.id,
+              document_type: result.documentType,
+              parser_used: result.parserUsed,
+              ocr_used: result.ocrUsed,
+              pages_processed: result.pagesProcessed,
+              text_length: result.textLength,
+              language: result.language,
+              success: result.success,
+              error_message: result.error,
+            })
+          }
+
+          routeOptions = {
+            documentAttachments: docsToProcess,
+            documentResults,
+            attachments: visionAttachments.length > 0 ? visionAttachments : undefined,
+            useVision: visionAttachments.length > 0 && documentAttachments.length === 0,
+          }
+        } else if (imageAttachments.length > 0) {
+          routeOptions = {
+            attachments: visionAttachments,
+            useVision: true,
+          }
+        }
       }
     }
 
-    const { stream, usedProvider, usedModel, usedKeyIndex, fallbackProvider, retryCount, healthScore, visionEnabled, attachmentCount } = await routeAIRequest(message, history, activeProviders, attachments)
+    const {
+      stream,
+      usedProvider,
+      usedModel,
+      usedKeyIndex,
+      fallbackProvider,
+      retryCount,
+      healthScore,
+      visionEnabled,
+      documentEnabled,
+      attachmentCount,
+      pagesProcessed,
+      textLength,
+      ocrUsed,
+      parserUsed,
+    } = await routeAIRequest(message, history, activeProviders, routeOptions)
 
     const startTime = Date.now()
 
     const responseStream = new ReadableStream({
       async start(controller) {
         const reader = stream.getReader()
-        const encoder = new TextEncoder()
         let fullText = ''
 
         try {
@@ -98,7 +180,12 @@ export async function POST(req: NextRequest) {
             retry_count: retryCount,
             health_score: healthScore,
             vision_enabled: visionEnabled,
+            document_enabled: documentEnabled,
             attachment_count: attachmentCount,
+            pages_processed: pagesProcessed,
+            text_length: textLength,
+            ocr_used: ocrUsed,
+            parser_used: parserUsed,
           })
 
           controller.close()
@@ -117,12 +204,17 @@ export async function POST(req: NextRequest) {
             retry_count: retryCount,
             health_score: healthScore,
             vision_enabled: visionEnabled,
+            document_enabled: documentEnabled,
             attachment_count: attachmentCount,
+            pages_processed: pagesProcessed,
+            text_length: textLength,
+            ocr_used: ocrUsed,
+            parser_used: parserUsed,
           })
 
-          const encoder2 = new TextEncoder()
+          const encoder = new TextEncoder()
           controller.enqueue(
-            encoder2.encode(`data: ${JSON.stringify({ type: 'error', content: 'Failed to get response from AI' })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ type: 'error', content: 'Failed to get response from AI' })}\n\n`)
           )
           controller.close()
         }
