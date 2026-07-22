@@ -1,18 +1,20 @@
 import OpenAI from 'openai'
 import { SYSTEM_PROMPT } from '../system-prompt'
 
+const SIMBANOVA_MODEL = 'nova-2'
+
 export async function callSimbanova(
   apiKey: string,
   message: string,
   history: { role: 'user' | 'assistant'; content: string }[]
-): Promise<ReadableStream> {
+): Promise<{ stream: ReadableStream; model: string }> {
   const client = new OpenAI({
     apiKey,
     baseURL: 'https://api.simbanova.com/v1',
   })
 
   const stream = await client.chat.completions.create({
-    model: 'nova-2',
+    model: SIMBANOVA_MODEL,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       ...history.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
@@ -23,22 +25,25 @@ export async function callSimbanova(
 
   const encoder = new TextEncoder()
 
-  return new ReadableStream({
-    async start(controller) {
-      try {
-        for await (const chunk of stream) {
-          const text = chunk.choices[0]?.delta?.content || ''
-          if (text) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', content: text })}\n\n`))
+  return {
+    stream: new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const text = chunk.choices[0]?.delta?.content || ''
+            if (text) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', content: text })}\n\n`))
+            }
           }
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`))
+        } catch (err) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'error', content: (err as Error).message })}\n\n`)
+          )
         }
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`))
-      } catch (err) {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: 'error', content: (err as Error).message })}\n\n`)
-        )
-      }
-      controller.close()
-    },
-  })
+        controller.close()
+      },
+    }),
+    model: SIMBANOVA_MODEL,
+  }
 }

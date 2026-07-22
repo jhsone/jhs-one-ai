@@ -47,8 +47,11 @@ export interface ProviderLog {
   id: number
   provider: string
   user_id: string | null
-  success: boolean
+  model: string | null
+  status: 'success' | 'failed'
+  response_time: number | null
   response_time_ms: number | null
+  tokens_used: number | null
   error_message: string | null
   created_at: string
 }

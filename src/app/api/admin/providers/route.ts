@@ -14,25 +14,42 @@ export async function GET() {
     .from('provider_logs')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(1000)
+    .limit(10000)
 
-  const providerStats: Record<string, { total: number; success: number; failed: number; avgTime: number }> = {}
+  const providerStats: Record<string, {
+    total: number
+    success: number
+    failed: number
+    avgResponseTime: number
+    lastUsed: string | null
+    models: string[]
+  }> = {}
 
   for (const log of logs || []) {
     if (!providerStats[log.provider]) {
-      providerStats[log.provider] = { total: 0, success: 0, failed: 0, avgTime: 0 }
+      providerStats[log.provider] = { total: 0, success: 0, failed: 0, avgResponseTime: 0, lastUsed: null, models: [] }
     }
-    providerStats[log.provider].total++
-    if (log.success) providerStats[log.provider].success++
-    else providerStats[log.provider].failed++
-    providerStats[log.provider].avgTime += log.response_time_ms || 0
+    const s = providerStats[log.provider]
+    s.total++
+    if (log.status === 'success' || log.success === true) s.success++
+    else s.failed++
+    if (log.response_time || log.response_time_ms) {
+      s.avgResponseTime += (log.response_time || log.response_time_ms || 0)
+    }
+    if (!s.lastUsed && log.created_at) s.lastUsed = log.created_at
+    if (log.model && !s.models.includes(log.model)) s.models.push(log.model)
   }
 
   for (const p of Object.keys(providerStats)) {
-    providerStats[p].avgTime = Math.round(providerStats[p].avgTime / providerStats[p].total)
+    const s = providerStats[p]
+    s.avgResponseTime = s.total > 0 ? Math.round(s.avgResponseTime / s.total) : 0
   }
 
   const keyStats = getKeyStats()
 
-  return NextResponse.json({ provider_stats: providerStats, key_stats: keyStats, logs: logs || [] })
+  return NextResponse.json({
+    provider_stats: providerStats,
+    key_stats: keyStats,
+    logs: logs || [],
+  })
 }

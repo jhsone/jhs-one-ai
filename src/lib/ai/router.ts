@@ -5,7 +5,9 @@ import { callGroq } from './providers/groq'
 import { callOpenRouter } from './providers/openrouter'
 import { callSimbanova } from './providers/simbanova'
 
-const providerCallbacks: Record<ProviderName, (key: string, msg: string, hist: { role: 'user' | 'assistant'; content: string }[]) => Promise<ReadableStream>> = {
+type ProviderResult = { stream: ReadableStream; model: string }
+
+const providerCallbacks: Record<ProviderName, (key: string, msg: string, hist: { role: 'user' | 'assistant'; content: string }[]) => Promise<ProviderResult>> = {
   gemini: callGemini,
   groq: callGroq,
   openrouter: callOpenRouter,
@@ -48,7 +50,7 @@ export async function routeAIRequest(
   message: string,
   history: { role: 'user' | 'assistant'; content: string }[],
   activeProviders?: ProviderName[]
-): Promise<{ stream: ReadableStream; usedProvider: ProviderName }> {
+): Promise<{ stream: ReadableStream; usedProvider: ProviderName; usedModel: string }> {
   const providers = activeProviders ?? providerOrder
   const shuffled = [...providers].sort(() => Math.random() - 0.5)
 
@@ -62,13 +64,13 @@ export async function routeAIRequest(
 
       if (!bestKey) continue
 
-      const stream = await withTimeout(
+      const result = await withTimeout(
         providerCallbacks[provider](bestKey.key, message, history),
         PROVIDER_TIMEOUT
       )
       recordKeyUsage(`${provider}-${bestKey.index}`, true)
 
-      return { stream, usedProvider: provider }
+      return { stream: result.stream, usedProvider: provider, usedModel: result.model }
     } catch (err) {
       const providerKeys = getAllKeys()[provider]
       for (const k of providerKeys) {

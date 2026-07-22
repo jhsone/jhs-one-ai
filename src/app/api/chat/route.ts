@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     const history = body.history || []
 
-    const { stream, usedProvider } = await routeAIRequest(message, history, activeProviders)
+    const { stream, usedProvider, usedModel } = await routeAIRequest(message, history, activeProviders)
 
     const startTime = Date.now()
 
@@ -66,9 +66,10 @@ export async function POST(req: NextRequest) {
 
           await supabase.from('provider_logs').insert({
             provider: usedProvider,
+            model: usedModel,
+            status: 'success',
+            response_time: responseTime,
             user_id: user.id,
-            success: true,
-            response_time_ms: responseTime,
           })
 
           controller.close()
@@ -77,9 +78,10 @@ export async function POST(req: NextRequest) {
 
           await supabase.from('provider_logs').insert({
             provider: usedProvider,
+            model: usedModel,
+            status: 'failed',
+            response_time: responseTime,
             user_id: user.id,
-            success: false,
-            response_time_ms: responseTime,
             error_message: (err as Error).message,
           })
 
