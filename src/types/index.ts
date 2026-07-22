@@ -58,6 +58,42 @@ export interface ProviderLog {
 
 export type ProviderName = 'gemini' | 'groq' | 'openrouter' | 'simbanova'
 
+export interface KeyHealth {
+  id: string
+  provider: string
+  index: number
+  isActive: boolean
+  cooldownUntil: number | null
+  lastUsed: number | null
+  successCount: number
+  failureCount: number
+  lastError: string | null
+  avgResponseTime: number | null
+  totalCalls: number
+}
+
+export type CooldownReason = 'rate_limit' | 'quota_exceeded' | 'auth_error' | 'provider_error' | 'timeout'
+
+export type ProviderStatus = 'healthy' | 'degraded' | 'cooldown' | 'offline'
+
+export interface ProviderHealth {
+  provider: ProviderName
+  status: ProviderStatus
+  healthScore: number
+  successRate: number
+  failureRate: number
+  avgResponseTime: number | null
+  totalRequests: number
+  successCount: number
+  failureCount: number
+  consecutiveFailures: number
+  lastUsed: number | null
+  lastSuccess: number | null
+  lastFailure: number | null
+  lastError: string | null
+  isAvailable: boolean
+}
+
 export interface ChatRequest {
   message: string
   conversation_id: string | null
@@ -67,6 +103,25 @@ export interface ChatRequest {
 export interface StreamChunk {
   type: 'text' | 'done' | 'error'
   content?: string
+}
+
+export interface Attachment {
+  id: string
+  user_id: string
+  conversation_id: string
+  message_id: number | null
+  file_name: string
+  file_type: string
+  mime_type: string
+  file_size: number
+  cloudinary_public_id: string
+  cloudinary_url: string
+  thumbnail_url: string | null
+  width: number | null
+  height: number | null
+  page_count: number | null
+  context_text: string | null
+  created_at: string
 }
 
 export interface DashboardStats {

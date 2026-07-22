@@ -1,7 +1,20 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Conversation, Message } from '@/types'
+import type { Conversation, Message, Attachment } from '@/types'
+
+interface PendingAttachment {
+  id: string
+  file: File
+  previewUrl: string
+  fileType: string
+  fileName: string
+  fileSize: number
+  progress: number
+  status: 'pending' | 'uploading' | 'done' | 'error'
+  error?: string
+  result?: Attachment
+}
 
 interface ChatState {
   conversations: Conversation[]
@@ -10,6 +23,7 @@ interface ChatState {
   isStreaming: boolean
   streamingContent: string
   error: string | null
+  pendingAttachments: PendingAttachment[]
   setConversations: (conversations: Conversation[]) => void
   setCurrentConversation: (id: string | null) => void
   setMessages: (messages: Message[]) => void
@@ -22,6 +36,10 @@ interface ChatState {
   updateConversation: (id: string, updates: Partial<Conversation>) => void
   removeConversation: (id: string) => void
   reset: () => void
+  addPendingAttachment: (att: PendingAttachment) => void
+  updatePendingAttachment: (id: string, updates: Partial<PendingAttachment>) => void
+  removePendingAttachment: (id: string) => void
+  clearPendingAttachments: () => void
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -31,6 +49,7 @@ export const useChatStore = create<ChatState>((set) => ({
   isStreaming: false,
   streamingContent: '',
   error: null,
+  pendingAttachments: [],
 
   setConversations: (conversations) => set({ conversations }),
   setCurrentConversation: (id) => set({ currentConversationId: id }),
@@ -58,5 +77,19 @@ export const useChatStore = create<ChatState>((set) => ({
       isStreaming: false,
       streamingContent: '',
       error: null,
+      pendingAttachments: [],
     }),
+
+  addPendingAttachment: (att) => set((s) => ({ pendingAttachments: [...s.pendingAttachments, att] })),
+  updatePendingAttachment: (id, updates) =>
+    set((s) => ({
+      pendingAttachments: s.pendingAttachments.map((a) =>
+        a.id === id ? { ...a, ...updates } : a
+      ),
+    })),
+  removePendingAttachment: (id) =>
+    set((s) => ({
+      pendingAttachments: s.pendingAttachments.filter((a) => a.id !== id),
+    })),
+  clearPendingAttachments: () => set({ pendingAttachments: [] }),
 }))

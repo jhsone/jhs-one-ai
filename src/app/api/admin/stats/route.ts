@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase, isAdmin } from '@/lib/supabase/server'
-import { getAllKeys } from '@/lib/ai/keys'
+import { keyManager } from '@/lib/keyManager'
 
 export async function GET() {
   const supabase = await createServerSupabase()
@@ -36,7 +36,7 @@ export async function GET() {
   const activeProviders: string[] = (settings?.value as string[]) || []
   const providerCount = activeProviders.length || 4
 
-  const totalKeys = Object.values(getAllKeys()).reduce((sum, arr) => sum + arr.length, 0)
+  const totalKeys = keyManager.getAllHealth().length
 
   return NextResponse.json({
     total_users: totalUsers || 0,

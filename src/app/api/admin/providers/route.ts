@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase, isAdmin } from '@/lib/supabase/server'
-import { getKeyStats } from '@/lib/ai/keys'
+import { keyManager } from '@/lib/keyManager'
 
 export async function GET() {
   const supabase = await createServerSupabase()
@@ -45,7 +45,7 @@ export async function GET() {
     s.avgResponseTime = s.total > 0 ? Math.round(s.avgResponseTime / s.total) : 0
   }
 
-  const keyStats = getKeyStats()
+  const keyStats = keyManager.getAllProviderStats()
 
   return NextResponse.json({
     provider_stats: providerStats,

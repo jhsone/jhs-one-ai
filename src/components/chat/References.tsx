@@ -27,7 +27,7 @@ const labelColors: Record<string, string> = {
   'Blog': 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
 }
 
-export function ReferenceCard({ ref: r }: { ref: Reference }) {
+export function ReferenceCard({ reference: r }: { reference: Reference }) {
   const Icon = labelIcons[r.label] || Globe
 
   return (
@@ -68,7 +68,7 @@ export function References({ references }: ReferencesProps) {
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {references.map((ref, i) => (
-          <ReferenceCard key={`${ref.url}-${i}`} ref={ref} />
+          <ReferenceCard key={`${ref.url}-${i}`} reference={ref} />
         ))}
       </div>
     </div>

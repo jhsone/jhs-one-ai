@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { LayoutDashboard, Users, MessageSquare, Key, Settings, AlertTriangle, BarChart3, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, MessageSquare, Key, Settings, AlertTriangle, BarChart3, Activity, Paperclip, LogOut, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { t } from '@/lib/i18n'
 import { AiAvatar } from '@/components/shared/AiAvatar'
@@ -14,7 +14,9 @@ const navItems = [
   { href: '/admin/users', labelKey: 'admin.users' as const, icon: Users },
   { href: '/admin/messages', labelKey: 'admin.messages' as const, icon: MessageSquare },
   { href: '/admin/providers', labelKey: 'admin.providers' as const, icon: BarChart3 },
+  { href: '/admin/provider-health', labelKey: 'admin.provider_health' as const, icon: Activity },
   { href: '/admin/keys', labelKey: 'admin.keys' as const, icon: Key },
+  { href: '/admin/attachments', labelKey: 'admin.attachments' as const, icon: Paperclip },
   { href: '/admin/error-logs', labelKey: 'admin.error_logs' as const, icon: AlertTriangle },
   { href: '/admin/settings', labelKey: 'admin.settings' as const, icon: Settings },
 ]
@@ -23,6 +25,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const pathname = usePathname()
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const check = async () => {
@@ -59,7 +62,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
-      <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Mobile hamburger */}
+      <button
+        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-lg bg-white dark:bg-gray-900 shadow-md"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label="Toggle sidebar"
+      >
+        {sidebarOpen ? <X className="h-5 w-5 text-gray-700 dark:text-gray-300" /> : <Menu className="h-5 w-5 text-gray-700 dark:text-gray-300" />}
+      </button>
+
+      <aside className={cn(
+        'w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col',
+        'fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 lg:relative lg:translate-x-0',
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      )}>
         <div className="p-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <AiAvatar size={32} />
@@ -69,11 +90,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
         </div>
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setSidebarOpen(false)}
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
                 pathname === item.href
@@ -89,6 +111,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-3 border-t border-gray-200 dark:border-gray-800">
           <Link
             href="/chat"
+            onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
           >
             <LogOut className="h-4 w-4" />
@@ -96,7 +119,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6">
         {children}
       </main>
     </div>

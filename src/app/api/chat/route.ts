@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     const history = body.history || []
 
-    const { stream, usedProvider, usedModel } = await routeAIRequest(message, history, activeProviders)
+    const { stream, usedProvider, usedModel, usedKeyIndex, fallbackProvider, retryCount, healthScore } = await routeAIRequest(message, history, activeProviders)
 
     const startTime = Date.now()
 
@@ -70,6 +70,10 @@ export async function POST(req: NextRequest) {
             status: 'success',
             response_time: responseTime,
             user_id: user.id,
+            api_key_index: usedKeyIndex,
+            fallback_provider: fallbackProvider,
+            retry_count: retryCount,
+            health_score: healthScore,
           })
 
           controller.close()
@@ -83,6 +87,10 @@ export async function POST(req: NextRequest) {
             response_time: responseTime,
             user_id: user.id,
             error_message: (err as Error).message,
+            api_key_index: usedKeyIndex,
+            fallback_provider: fallbackProvider,
+            retry_count: retryCount,
+            health_score: healthScore,
           })
 
           const encoder2 = new TextEncoder()

@@ -7,6 +7,8 @@ import { ThinkingIndicator } from './ThinkingIndicator'
 import { ErrorBanner } from './ErrorBanner'
 import { useChatStore } from '@/store/chat-store'
 
+const STREAMING_PLACEHOLDER_ID = -1
+
 export function ChatMessages() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const messages = useChatStore((s) => s.messages)
@@ -34,7 +36,7 @@ export function ChatMessages() {
           <>
             <MessageBubble
               message={{
-                id: 0,
+                id: STREAMING_PLACEHOLDER_ID,
                 conversation_id: '',
                 role: 'assistant',
                 content: '',

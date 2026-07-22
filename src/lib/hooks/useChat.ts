@@ -87,7 +87,7 @@ export function useChat() {
       content,
     })
 
-    const history = [...store.messages, tempUserMsg].map(m => ({
+    const history = store.messages.map(m => ({
       role: m.role,
       content: m.content,
     }))
@@ -158,7 +158,7 @@ export function useChat() {
                 store.setError(data.content)
                 store.setIsStreaming(false)
               }
-            } catch {}
+            } catch (parseErr) { console.error('SSE parse error:', parseErr) }
           }
         }
       }

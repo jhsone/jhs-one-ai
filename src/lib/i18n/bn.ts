@@ -145,6 +145,8 @@ export const bn: Record<string, any> = {
     keys: 'এপিআই কী',
     settings: 'সেটিংস',
     error_logs: 'ত্রুটি লগ',
+    provider_health: 'প্রদানকারীর স্বাস্থ্য',
+    attachments: 'সংযুক্তি',
     total_users: 'মোট ব্যবহারকারী',
     total_messages: 'মোট বার্তা',
     provider_status: 'প্রদানকারীর অবস্থা',

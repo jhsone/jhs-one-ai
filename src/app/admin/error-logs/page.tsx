@@ -78,7 +78,7 @@ export default function AdminErrorLogsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800">
-                  <th className="text-left py-3 px-3 text-gray-500">Date &amp; Time</th>
+                  <th className="text-left py-3 px-3 text-gray-500">Date & Time</th>
                   <th className="text-left py-3 px-3 text-gray-500">User</th>
                   <th className="text-left py-3 px-3 text-gray-500">Provider</th>
                   <th className="text-left py-3 px-3 text-gray-500">Model</th>

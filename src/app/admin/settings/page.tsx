@@ -68,7 +68,7 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('admin.settings')}</h2>
         {message && <Badge variant="success">{message}</Badge>}
       </div>
@@ -80,9 +80,9 @@ export default function AdminSettingsPage() {
           {providers.map(p => {
             const isActive = activeProviders.includes(p.id)
             return (
-              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+              <div key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
                 <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <div className={`w-3 h-3 rounded-full shrink-0 ${isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
                   <div>
                     <p className="font-medium text-gray-900 dark:text-gray-100">{p.name}</p>
                     <p className="text-xs text-gray-500">{p.keys} {t('admin.api_keys_label')}</p>
@@ -93,6 +93,7 @@ export default function AdminSettingsPage() {
                   size="sm"
                   onClick={() => toggleProvider(p.id)}
                   disabled={saving}
+                  className="self-start sm:self-auto"
                 >
                   {isActive ? t('admin.disabled') : t('admin.enabled')}
                 </Button>
@@ -105,7 +106,7 @@ export default function AdminSettingsPage() {
       <Card>
         <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('language.select_language')}</h3>
         <p className="text-sm text-gray-500 mb-4">{t('language.change')}</p>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {(['en', 'bn'] as Lang[]).map((code) => (
             <button
               key={code}

@@ -145,6 +145,8 @@ export const en = {
     keys: 'API Keys',
     settings: 'Settings',
     error_logs: 'Error Logs',
+    provider_health: 'Provider Health',
+    attachments: 'Attachments',
     total_users: 'Total Users',
     total_messages: 'Total Messages',
     provider_status: 'Provider Status',

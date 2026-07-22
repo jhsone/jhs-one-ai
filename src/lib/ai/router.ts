@@ -1,89 +1,24 @@
 import type { ProviderName } from '@/types'
-import { getAllKeys, selectBestKey, recordKeyUsage } from './keys'
-import { callGemini } from './providers/gemini'
-import { callGroq } from './providers/groq'
-import { callOpenRouter } from './providers/openrouter'
-import { callSimbanova } from './providers/simbanova'
-
-type ProviderResult = { stream: ReadableStream; model: string }
-
-const providerCallbacks: Record<ProviderName, (key: string, msg: string, hist: { role: 'user' | 'assistant'; content: string }[]) => Promise<ProviderResult>> = {
-  gemini: callGemini,
-  groq: callGroq,
-  openrouter: callOpenRouter,
-  simbanova: callSimbanova,
-}
-
-const providerWeights: Record<ProviderName, number> = {
-  gemini: 40,
-  groq: 35,
-  openrouter: 15,
-  simbanova: 10,
-}
-
-function pickProvider(activeProviders: ProviderName[]): ProviderName {
-  const totalWeight = activeProviders.reduce((sum, p) => sum + (providerWeights[p] ?? 0), 0)
-  let random = Math.random() * totalWeight
-
-  for (const provider of activeProviders) {
-    random -= providerWeights[provider] ?? 0
-    if (random <= 0) return provider
-  }
-
-  return activeProviders[activeProviders.length - 1]
-}
-
-const PROVIDER_TIMEOUT = 8000
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`Provider timed out after ${ms}ms`)), ms)
-    ),
-  ])
-}
-
-const providerOrder: ProviderName[] = ['gemini', 'groq', 'openrouter', 'simbanova']
+import { providerRouter } from '@/lib/providerRouter'
 
 export async function routeAIRequest(
   message: string,
   history: { role: 'user' | 'assistant'; content: string }[],
   activeProviders?: ProviderName[]
-): Promise<{ stream: ReadableStream; usedProvider: ProviderName; usedModel: string }> {
-  const providers = activeProviders ?? providerOrder
-  const shuffled = [...providers].sort(() => Math.random() - 0.5)
+): Promise<{ stream: ReadableStream; usedProvider: ProviderName; usedModel: string; usedKeyIndex: number; fallbackProvider: ProviderName | null; retryCount: number; healthScore: number }> {
+  const result = await providerRouter.route(message, history, activeProviders)
 
-  let lastError: Error | null = null
-
-  for (const provider of shuffled) {
-    try {
-      const allKeys = getAllKeys()
-      const providerKeys = allKeys[provider]
-      const bestKey = selectBestKey(providerKeys)
-
-      if (!bestKey) continue
-
-      const result = await withTimeout(
-        providerCallbacks[provider](bestKey.key, message, history),
-        PROVIDER_TIMEOUT
-      )
-      recordKeyUsage(`${provider}-${bestKey.index}`, true)
-
-      return { stream: result.stream, usedProvider: provider, usedModel: result.model }
-    } catch (err) {
-      const providerKeys = getAllKeys()[provider]
-      for (const k of providerKeys) {
-        recordKeyUsage(`${provider}-${k.index}`, false)
-      }
-      lastError = err as Error
-      continue
-    }
+  return {
+    stream: result.stream,
+    usedProvider: result.usedProvider,
+    usedModel: result.usedModel,
+    usedKeyIndex: result.usedKeyIndex,
+    fallbackProvider: result.fallbackProvider,
+    retryCount: result.retryCount,
+    healthScore: result.healthScore,
   }
-
-  throw lastError ?? new Error('No AI providers available')
 }
 
 export function getActiveProviders(): ProviderName[] {
-  return providerOrder
+  return providerRouter.getPriority()
 }
