@@ -27,6 +27,8 @@ export async function extractTextFromImage(
     const text = data.text.trim()
     const processingTime = Date.now() - startTime
 
+    console.log('[ocr] success, textLen:', text.length, 'time:', processingTime + 'ms', 'preview:', text.slice(0, 100))
+
     return {
       success: true,
       documentType: 'image',
@@ -40,6 +42,7 @@ export async function extractTextFromImage(
       error: undefined,
     }
   } catch (err) {
+    console.error('[ocr] failed:', (err as Error).message)
     return {
       success: false,
       documentType: 'image',

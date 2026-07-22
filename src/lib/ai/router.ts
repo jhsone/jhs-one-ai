@@ -38,9 +38,42 @@ export async function routeAIRequest(
   const documentResults = options?.documentResults
   const useVision = options?.useVision ?? true
 
-  if (documentAttachments && documentResults && documentAttachments.length > 0) {
-    const context = documentEngine.buildContext(message, history, documentResults, documentAttachments)
-    const summary = documentEngine.getSummary(documentResults)
+  const hasDocContext = documentAttachments && documentResults && documentAttachments.length > 0
+  const hasVisionImages = attachments && attachments.length > 0 && hasImageAttachments(attachments) && useVision
+
+  if (hasDocContext && hasVisionImages) {
+    // Both document text + images: use vision engine with augmented message
+    const context = documentEngine.buildContext(message, history, documentResults!, documentAttachments!)
+    const summary = documentEngine.getSummary(documentResults!)
+
+    console.log('[router] doc+vision path, contextLen:', context.totalContextLength, 'augmentedMsgLen:', context.augmentedMessage.length)
+
+    const visionResult = await visionEngine.process(context.augmentedMessage, history, attachments!, activeProviders)
+
+    return {
+      stream: visionResult.result.stream,
+      usedProvider: visionResult.usedProvider as ProviderName,
+      usedModel: visionResult.result.model,
+      usedKeyIndex: visionResult.usedKeyIndex,
+      fallbackProvider: visionResult.fallbackProvider,
+      retryCount: visionResult.retryCount,
+      healthScore: 100,
+      visionEnabled: true,
+      documentEnabled: true,
+      attachmentCount: documentAttachments!.length + attachments!.length,
+      pagesProcessed: summary.totalPages,
+      textLength: summary.totalTextLength,
+      ocrUsed: summary.ocrUsed,
+      parserUsed: summary.parsersUsed.join(','),
+    }
+  }
+
+  if (hasDocContext) {
+    // Documents only: use any provider with extracted text
+    const context = documentEngine.buildContext(message, history, documentResults!, documentAttachments!)
+    const summary = documentEngine.getSummary(documentResults!)
+
+    console.log('[router] doc-only path, contextLen:', context.totalContextLength, 'augmentedMsgLen:', context.augmentedMessage.length, 'augmentedPreview:', context.augmentedMessage.slice(0, 200))
 
     const result = await providerRouter.route(context.augmentedMessage, history, activeProviders)
 
@@ -54,7 +87,7 @@ export async function routeAIRequest(
       healthScore: result.healthScore,
       visionEnabled: false,
       documentEnabled: true,
-      attachmentCount: documentAttachments.length,
+      attachmentCount: documentAttachments!.length,
       pagesProcessed: summary.totalPages,
       textLength: summary.totalTextLength,
       ocrUsed: summary.ocrUsed,
@@ -62,14 +95,14 @@ export async function routeAIRequest(
     }
   }
 
-  if (attachments && attachments.length > 0 && hasImageAttachments(attachments) && useVision) {
-    const visionResult = await visionEngine.process(message, history, attachments, activeProviders)
-
-    const usedProvider = visionResult.usedProvider as ProviderName
+  if (hasVisionImages) {
+    // Images only: use vision engine
+    console.log('[router] vision-only path')
+    const visionResult = await visionEngine.process(message, history, attachments!, activeProviders)
 
     return {
       stream: visionResult.result.stream,
-      usedProvider,
+      usedProvider: visionResult.usedProvider as ProviderName,
       usedModel: visionResult.result.model,
       usedKeyIndex: visionResult.usedKeyIndex,
       fallbackProvider: visionResult.fallbackProvider,
@@ -77,7 +110,7 @@ export async function routeAIRequest(
       healthScore: 100,
       visionEnabled: true,
       documentEnabled: false,
-      attachmentCount: attachments.length,
+      attachmentCount: attachments!.length,
       pagesProcessed: 0,
       textLength: 0,
       ocrUsed: false,

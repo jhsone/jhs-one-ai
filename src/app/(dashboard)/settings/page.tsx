@@ -3,7 +3,7 @@
 import { useAuth } from '@/components/shared/AuthProvider'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { Globe, Moon, Clock, FileText, Code, Radio, ScrollText, Bell, Mail, Smartphone, Download, Trash2, Sliders, Info, ExternalLink, Loader2 } from 'lucide-react'
+import { Globe, Moon, Clock, FileText, Code, Radio, ScrollText, Bell, Mail, Smartphone, Download, Trash2, Sliders, Info, ExternalLink, Loader2, Brain } from 'lucide-react'
 import { t } from '@/lib/i18n'
 import { useAppStore, type Lang } from '@/store/app-store'
 import { useTheme } from '@/components/shared/ThemeProvider'
@@ -124,6 +124,19 @@ export default function SettingsPage() {
       id: 'chat',
       title: t('settings.chat'),
       items: [
+        {
+          icon: Brain,
+          label: 'Long-Term Memory Engine',
+          description: 'View and manage what JHS One AI remembers about you',
+          action: (
+            <button
+              onClick={() => router.push('/settings/memory')}
+              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+            >
+              Manage Memory
+            </button>
+          ),
+        },
         {
           icon: Radio,
           label: t('settings.response_style'),

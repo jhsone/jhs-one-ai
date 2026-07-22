@@ -1,5 +1,7 @@
 import type { ParserResult, BuiltContext, ContextOptions, DocumentAttachment } from '../types'
 import { SYSTEM_PROMPT } from '@/lib/ai/system-prompt'
+import { MemoryItem } from '@/lib/memory/types'
+import { formatMemoriesForContext } from '@/lib/memory/retrieval'
 
 const DEFAULT_OPTIONS: ContextOptions = {
   includeHistory: true,
@@ -61,7 +63,8 @@ export function buildFullContext(
   history: { role: 'user' | 'assistant'; content: string }[],
   documentResults: ParserResult[],
   attachments: DocumentAttachment[],
-  options?: Partial<ContextOptions>
+  options?: Partial<ContextOptions>,
+  relevantMemories?: MemoryItem[]
 ): BuiltContext {
   const opts = { ...DEFAULT_OPTIONS, ...options }
 
@@ -70,20 +73,32 @@ export function buildFullContext(
     documentContext = buildDocumentContext(documentResults, attachments)
   }
 
+  let memoryContext = ''
+  if (relevantMemories && relevantMemories.length > 0) {
+    memoryContext = formatMemoriesForContext(relevantMemories)
+  }
+
   let augmentedMessage = message
+
+  const contextBlocks: string[] = []
+
+  if (memoryContext) {
+    contextBlocks.push(memoryContext)
+  }
 
   if (documentContext) {
     const truncatedContext = truncateText(documentContext, opts.maxContextLength)
+    contextBlocks.push(`Document Context (extracted from uploaded files):\n\n${truncatedContext}`)
+  }
 
+  if (contextBlocks.length > 0) {
     augmentedMessage = `${message}
 
 ---
-Document Context (extracted from uploaded files):
-
-${truncatedContext}
+${contextBlocks.join('\n\n---\n\n')}
 
 ---
-Answer the user's question based on the document context above. If the question refers to a specific page, find the relevant content. If the answer is not in the documents, say so clearly.`
+Answer the user's question taking into account the user's long-term memory and document context above. If the question refers to a specific page, find the relevant content. If the answer is not in the documents or memory, say so clearly.`
   }
 
   return {
@@ -104,18 +119,27 @@ function truncateText(text: string, maxLength: number): string {
   return `${start}\n\n[...content truncated...]\n\n${end}`
 }
 
+function parseNumericString(str: string): number {
+  const bengaliMap: Record<string, string> = {
+    '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+    '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+  }
+  const ascii = str.replace(/[০-৯]/g, d => bengaliMap[d] ?? d)
+  return parseInt(ascii, 10)
+}
+
 export function extractPageNumberFromQuery(message: string): number | null {
   const patterns = [
-    /page\s+(\d+)/i,
-    /p\.\s*(\d+)/i,
-    /পৃষ্ঠা\s*(\d+)/,
-    /পৃষ্ঠা\s*নম্বর\s*(\d+)/,
+    /page\s+(\d+|[০-৯]+)/i,
+    /p\.\s*(\d+|[০-৯]+)/i,
+    /পৃষ্ঠা\s*([০-৯]+|\d+)/,
+    /পৃষ্ঠা\s*নম্বর\s*([০-৯]+|\d+)/,
   ]
 
   for (const pattern of patterns) {
     const match = message.match(pattern)
     if (match) {
-      const num = parseInt(match[1], 10)
+      const num = parseNumericString(match[1])
       if (num > 0) return num
     }
   }
@@ -125,16 +149,16 @@ export function extractPageNumberFromQuery(message: string): number | null {
 
 export function extractChapterFromQuery(message: string): number | null {
   const patterns = [
-    /chapter\s+(\d+)/i,
-    /ch\.\s*(\d+)/i,
-    /অধ্যায়\s*(\d+)/,
-    /অধ্যায়\s*নম্বর\s*(\d+)/,
+    /chapter\s+(\d+|[০-৯]+)/i,
+    /ch\.\s*(\d+|[০-৯]+)/i,
+    /অধ্যায়\s*([০-৯]+|\d+)/,
+    /অধ্যায়\s*নম্বর\s*([০-৯]+|\d+)/,
   ]
 
   for (const pattern of patterns) {
     const match = message.match(pattern)
     if (match) {
-      const num = parseInt(match[1], 10)
+      const num = parseNumericString(match[1])
       if (num > 0) return num
     }
   }
