@@ -73,7 +73,7 @@ async function runMemoryTests() {
     }
   ]
 
-  const relevant = retrieveRelevantMemories('How is the JHS One AI project going?', mockMemories)
+  const relevant = await retrieveRelevantMemories('How is the JHS One AI project going?', mockMemories)
   assert(relevant.some(m => m.key === 'Ongoing Project'), 'Retrieved project memory for project query')
   assert(relevant.some(m => m.category_id === 'profile'), 'Included profile memory by default')
   console.log('Relevant Retrieved Memories:', relevant.map(m => m.key))

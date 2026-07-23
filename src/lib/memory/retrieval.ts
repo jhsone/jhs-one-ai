@@ -1,38 +1,47 @@
 import type { MemoryItem } from './types'
+import { generateEmbedding, cosineSimilarity } from './embeddings'
 
 /**
- * Memory Retrieval: Selects only relevant memories based on the user's current message.
- * Does not inject unrelated memories.
+ * Enhanced Semantic & Hybrid Memory Retrieval:
+ * Blends vector semantic cosine similarity with keyword matching and category weighting.
  */
-export function retrieveRelevantMemories(
+export async function retrieveRelevantMemories(
   currentMessage: string,
   allMemories: MemoryItem[],
   maxMemoriesToInject: number = 5
-): MemoryItem[] {
+): Promise<MemoryItem[]> {
   if (!allMemories || allMemories.length === 0) return []
 
   const lowerMsg = currentMessage.toLowerCase()
   const msgWords = new Set(lowerMsg.split(/\s+/).filter(w => w.length > 2))
 
-  // Score each memory for relevance to the current message
+  // Generate embedding for current query message for semantic search
+  const queryEmbedding = await generateEmbedding(currentMessage)
+
   const scoredMemories = allMemories.map(mem => {
     let relevanceScore = 0
     const memText = `${mem.key} ${mem.value} ${mem.category_id}`.toLowerCase()
 
-    // Profile & preferences are always moderately relevant for personalization
+    // 1. Profile & preferences are always moderately relevant for personalization
     if (mem.category_id === 'profile' || mem.category_id === 'preference') {
       relevanceScore += 2.0
     }
 
-    // Check keyword overlap with message
+    // 2. Keyword overlap score
     for (const word of msgWords) {
       if (memText.includes(word)) {
         relevanceScore += 1.5
       }
     }
 
-    // Boost recently accessed or high confidence memories
-    relevanceScore += mem.confidence * 0.5
+    // 3. Semantic Vector Cosine Similarity score (if embedding exists on memory)
+    if (queryEmbedding && (mem as any).embedding && Array.isArray((mem as any).embedding)) {
+      const similarity = cosineSimilarity(queryEmbedding, (mem as any).embedding)
+      relevanceScore += similarity * 3.0 // High weight for semantic meaning match
+    }
+
+    // 4. Boost confidence & access frequency
+    relevanceScore += (mem.confidence || 1.0) * 0.5
 
     return { mem, score: relevanceScore }
   })
