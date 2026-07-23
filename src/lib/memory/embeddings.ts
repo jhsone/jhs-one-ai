@@ -1,41 +1,48 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import OpenAI from 'openai'
+import { keyManager } from '@/lib/keyManager'
 
 /**
- * Provider-independent embedding generator using available AI API keys (Gemini or OpenAI).
+ * Provider-independent embedding generator using KeyManager for key rotation and health tracking.
  */
 export async function generateEmbedding(text: string): Promise<number[] | null> {
   if (!text || text.trim().length === 0) return null
 
-  // 1. Try Gemini embedding-001 or text-embedding-004
-  const geminiKey = process.env.GEMINI_API_KEY
-  if (geminiKey) {
+  // 1. Try Gemini via KeyManager (supports key rotation, cooldown, health tracking)
+  const geminiKeyEntry = keyManager.getNextKey('gemini')
+  if (geminiKeyEntry) {
     try {
-      const ai = new GoogleGenerativeAI(geminiKey)
+      const ai = new GoogleGenerativeAI(geminiKeyEntry.key)
       const model = ai.getGenerativeModel({ model: 'text-embedding-004' })
       const result = await model.embedContent(text)
       if (result.embedding?.values) {
+        keyManager.recordSuccess(geminiKeyEntry.id, 0)
         return Array.from(result.embedding.values)
       }
     } catch (err) {
-      console.warn('[embedding] Gemini embedding failed, trying fallback:', (err as Error).message)
+      const errorMessage = (err as Error).message
+      keyManager.recordFailure(geminiKeyEntry.id, errorMessage, keyManager.classifyError(errorMessage))
+      console.warn('[embedding] Gemini embedding failed, trying fallback:', errorMessage)
     }
   }
 
-  // 2. Try OpenAI embedding model text-embedding-3-small
-  const openAiKey = process.env.OPENAI_API_KEY
-  if (openAiKey) {
+  // 2. Try OpenAI (fallback if Gemini fails or has no keys configured)
+  const openaiKeyEntry = keyManager.getNextKey('openai')
+  if (openaiKeyEntry) {
     try {
-      const openai = new OpenAI({ apiKey: openAiKey })
+      const openai = new OpenAI({ apiKey: openaiKeyEntry.key })
       const response = await openai.embeddings.create({
         model: 'text-embedding-3-small',
         input: text,
       })
       if (response.data[0]?.embedding) {
+        keyManager.recordSuccess(openaiKeyEntry.id, 0)
         return response.data[0].embedding
       }
     } catch (err) {
-      console.warn('[embedding] OpenAI embedding failed:', (err as Error).message)
+      const errorMessage = (err as Error).message
+      keyManager.recordFailure(openaiKeyEntry.id, errorMessage)
+      console.warn('[embedding] OpenAI embedding failed:', errorMessage)
     }
   }
 

@@ -31,11 +31,13 @@ class KeyManager {
       groq: 'GROQ_KEY_',
       openrouter: 'OPENROUTER_KEY_',
       simbanova: 'SIMBANOVA_KEY_',
+      openai: 'OPENAI_KEY_',
     }
 
     for (const [provider, prefix] of Object.entries(patterns)) {
       let index = 0
       let hasKeys = false
+      // Indexed keys: GEMINI_KEY_0, GEMINI_KEY_1, ...
       while (true) {
         const key = process.env[`${prefix}${index}`]
         if (!key) break
@@ -56,6 +58,28 @@ class KeyManager {
         })
         index++
         hasKeys = true
+      }
+      // Fallback to singular env var if no indexed keys found
+      if (!hasKeys) {
+        const singularKey = process.env[`${provider.toUpperCase()}_API_KEY`]
+        if (singularKey) {
+          const id = `${provider}-0`
+          this.keys.set(id, { key: singularKey, provider, index: 0 })
+          this.health.set(id, {
+            id,
+            provider,
+            index: 0,
+            isActive: true,
+            cooldownUntil: null,
+            lastUsed: null,
+            successCount: 0,
+            failureCount: 0,
+            lastError: null,
+            avgResponseTime: null,
+            totalCalls: 0,
+          })
+          hasKeys = true
+        }
       }
       if (hasKeys) {
         this.providers.push(provider)
