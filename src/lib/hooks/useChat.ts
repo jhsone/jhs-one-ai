@@ -210,17 +210,21 @@ export function useChat() {
       .update({ content: newContent })
       .eq('id', originalMsg.id)
 
-    store.setIsStreaming(true)
-    store.setStreamingContent('')
-    store.setError(null)
-
-    // Build history up to (and including) the edited message
+    // Build history and remove stale messages after edited message from store
     const msgs = useChatStore.getState().messages
     const editIdx = msgs.findIndex(m => m.id === originalMsg.id)
-    const history = msgs.slice(0, editIdx + 1).map(m => ({
+    if (editIdx === -1) return
+
+    store.setMessages(msgs.slice(0, editIdx + 1))
+
+    const history = msgs.slice(0, editIdx).map(m => ({
       role: m.role,
       content: m.content,
     }))
+
+    store.setIsStreaming(true)
+    store.setStreamingContent('')
+    store.setError(null)
 
     try {
       abortRef.current = new AbortController()
@@ -260,18 +264,19 @@ export function useChat() {
     const idx = msgs.findIndex(m => m.id === assistantMsg.id)
 
     // Find the preceding user message
-    const userMsgIdx = idx
     let userMsg: Message | null = null
+    let userMsgIdx = 0
     for (let i = idx - 1; i >= 0; i--) {
       if (msgs[i].role === 'user') {
         userMsg = msgs[i]
+        userMsgIdx = i
         break
       }
     }
     if (!userMsg) return
 
-    // Remove old assistant response from store (but keep in DB for auditing)
-    store.replaceMessagesAfter(userMsg.id, { ...userMsg })
+    // Remove old assistant response(s) from store (keep DB for audit)
+    store.setMessages(msgs.slice(0, userMsgIdx + 1))
 
     store.setIsStreaming(true)
     store.setStreamingContent('')
