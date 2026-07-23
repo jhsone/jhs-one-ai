@@ -256,8 +256,10 @@ export async function POST(req: NextRequest) {
 
             for (const line of lines) {
               if (line.startsWith('data: ')) {
+                const payload = line.slice(6).trim()
+                if (!payload) continue
                 try {
-                  const data = JSON.parse(line.slice(6))
+                  const data = JSON.parse(payload)
                   if (data.type === 'text') fullText += data.content
                 } catch {}
               }
