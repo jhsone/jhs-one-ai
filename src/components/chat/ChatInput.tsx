@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Square, Paperclip, Camera, Image, File as FileIcon, X } from 'lucide-react'
+import { Send, Square, Paperclip, Camera, Image, File as FileIcon, X, Mic, MicOff } from 'lucide-react'
 import { useChatStore } from '@/store/chat-store'
 import { useChat } from '@/lib/hooks/useChat'
+import { useVoice } from '@/lib/hooks/useVoice'
 import { FileProcessor } from '@/lib/upload/file-processor'
 import { ACCEPTED_MIME_TYPES } from '@/lib/upload/types'
 import { AttachmentPreview } from './AttachmentPreview'
@@ -23,6 +24,7 @@ export function ChatInput() {
   const clearPendingAttachments = useChatStore((s) => s.clearPendingAttachments)
   const currentConversationId = useChatStore((s) => s.currentConversationId)
   const { sendMessage, stopStreaming, createConversation } = useChat()
+  const { isListening, transcript, startListening, stopListening, isSupported: voiceSupported } = useVoice()
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -30,6 +32,13 @@ export function ChatInput() {
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px'
     }
   }, [input])
+
+  // Voice transcript -> input
+  useEffect(() => {
+    if (transcript) {
+      setInput(prev => prev ? prev + ' ' + transcript : transcript)
+    }
+  }, [transcript])
 
   const handleAttachFiles = async (files: FileList | null) => {
     if (!files) return
@@ -231,6 +240,22 @@ export function ChatInput() {
               onChange={(e) => handleAttachFiles(e.target.files)}
             />
           </div>
+
+          {/* Voice input button */}
+          {voiceSupported && (
+            <button
+              onClick={isListening ? stopListening : startListening}
+              className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                isListening
+                  ? 'bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 animate-pulse'
+                  : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
+              }`}
+              aria-label={isListening ? 'Stop recording' : 'Voice input'}
+              disabled={isStreaming}
+            >
+              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+          )}
 
           <textarea
             ref={textareaRef}

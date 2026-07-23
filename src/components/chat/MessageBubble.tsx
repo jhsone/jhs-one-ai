@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { User, Pencil, RefreshCw, Check, X } from 'lucide-react'
+import { User, Pencil, RefreshCw, Check, X, Volume2, VolumeX } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { References } from './References'
 import { RichResponse } from './RichResponse'
@@ -11,6 +11,7 @@ import { parseReferences } from '@/lib/utils/references'
 import { parseRichResponse } from '@/lib/utils/rich-response'
 import { useChatStore } from '@/store/chat-store'
 import { useChat } from '@/lib/hooks/useChat'
+import { useVoice } from '@/lib/hooks/useVoice'
 import type { Message } from '@/types'
 import { useMemo } from 'react'
 
@@ -26,6 +27,7 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
   const [editContent, setEditContent] = useState('')
   const replaceMessagesAfter = useChatStore((s) => s.replaceMessagesAfter)
   const { editAndResend, regenerateResponse } = useChat()
+  const { isSpeaking, speak, stopSpeaking } = useVoice()
 
   const rawContent = isStreaming ? streamingContent || '' : message.content
 
@@ -64,6 +66,14 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
   const handleRegenerate = useCallback(() => {
     regenerateResponse(message)
   }, [message, regenerateResponse])
+
+  const toggleSpeak = useCallback(() => {
+    if (isSpeaking) {
+      stopSpeaking()
+    } else {
+      speak(cleanContent)
+    }
+  }, [isSpeaking, speak, stopSpeaking, cleanContent])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -161,13 +171,22 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
               </button>
             )}
             {!isUser && (
-              <button
-                onClick={handleRegenerate}
-                className="p-1 rounded-md text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
-                title="Regenerate response"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-              </button>
+              <>
+                <button
+                  onClick={toggleSpeak}
+                  className="p-1 rounded-md text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                  title={isSpeaking ? 'Stop speaking' : 'Read aloud'}
+                >
+                  {isSpeaking ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                </button>
+                <button
+                  onClick={handleRegenerate}
+                  className="p-1 rounded-md text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                  title="Regenerate response"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+              </>
             )}
           </div>
         )}
