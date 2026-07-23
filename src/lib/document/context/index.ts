@@ -82,6 +82,14 @@ export function buildFullContext(
 
   const contextBlocks: string[] = []
 
+  // Include recent conversation history for context
+  if (opts.includeHistory && history.length > 0) {
+    const recentHistory = history.slice(-4).map(h =>
+      `${h.role === 'user' ? 'User' : 'AI'}: ${h.content.slice(0, 300)}`
+    ).join('\n')
+    contextBlocks.push(`Conversation History (recent messages):\n${recentHistory}`)
+  }
+
   if (memoryContext) {
     contextBlocks.push(memoryContext)
   }
@@ -98,7 +106,7 @@ export function buildFullContext(
 ${contextBlocks.join('\n\n---\n\n')}
 
 ---
-Answer the user's question taking into account the user's long-term memory and document context above. If the question refers to a specific page, find the relevant content. If the answer is not in the documents or memory, say so clearly.`
+Answer the user's question taking into account the conversation history, user's long-term memory, and document context above. If the question refers to a specific page, find the relevant content. If the answer is not in the documents or memory, say so clearly.`
   }
 
   return {
