@@ -37,29 +37,29 @@ export async function extractTextFromPDFBuffer(
     let pages: ParsedPage[] = []
 
     if ((pdfParseModule as any).PDFParse) {
-      // v2 class API
+      // v2 class API with robust error handling and multi-pass cleanup
       const { PDFParse } = pdfParseModule as any
-      const parser = new PDFParse({ data: buffer })
+      const parser = new PDFParse({ data: buffer, verbosity: 0 })
       const data = await parser.getText()
 
-      fullText = (data.text || '').trim()
+      fullText = cleanExtractedText(data.text || '')
 
       if (Array.isArray(data.pages) && data.pages.length > 0) {
         pages = data.pages.map((p: { text: string; num: number }) => ({
           pageNumber: p.num,
-          text: (p.text || '').trim(),
+          text: cleanExtractedText(p.text || ''),
         }))
       }
       await parser.destroy?.()
     } else {
-      // v1 function API
+      // v1 function API fallback
       const pdfParse = (pdfParseModule as any).default ?? pdfParseModule
       const data = await pdfParse(buffer)
-      fullText = (data.text || '').trim()
+      fullText = cleanExtractedText(data.text || '')
 
       const pageTexts = fullText.split(/\f/)
       for (let i = 0; i < pageTexts.length; i++) {
-        const pageText = pageTexts[i].trim()
+        const pageText = cleanExtractedText(pageTexts[i])
         if (pageText) {
           pages.push({ pageNumber: i + 1, text: pageText })
         }
@@ -69,8 +69,6 @@ export async function extractTextFromPDFBuffer(
     if (pages.length === 0 && fullText) {
       pages.push({ pageNumber: 1, text: fullText })
     }
-
-    console.log('[pdf] parsed successfully, pages:', pages.length, 'textLen:', fullText.length, 'preview:', fullText.slice(0, 100))
 
     return {
       success: true,
@@ -83,7 +81,6 @@ export async function extractTextFromPDFBuffer(
       parserUsed: 'pdf-parse',
     }
   } catch (err) {
-    console.error('[pdf] extraction failed:', (err as Error).message)
     return {
       success: false,
       documentType: 'pdf',
@@ -96,4 +93,13 @@ export async function extractTextFromPDFBuffer(
       error: (err as Error).message,
     }
   }
+}
+
+function cleanExtractedText(text: string): string {
+  if (!text) return ''
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
