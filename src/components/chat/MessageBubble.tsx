@@ -2,14 +2,13 @@
 
 import { useState, useCallback } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { User, Pencil, RefreshCw, Check, X, Volume2, VolumeX } from 'lucide-react'
+import { User, Pencil, RefreshCw, Check, X, Volume2, VolumeX, GitBranch } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { References } from './References'
 import { RichResponse } from './RichResponse'
 import { AiAvatar } from '@/components/shared/AiAvatar'
 import { parseReferences } from '@/lib/utils/references'
 import { parseRichResponse } from '@/lib/utils/rich-response'
-import { useChatStore } from '@/store/chat-store'
 import { useChat } from '@/lib/hooks/useChat'
 import { useVoice } from '@/lib/hooks/useVoice'
 import type { Message } from '@/types'
@@ -25,8 +24,7 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
   const isUser = message.role === 'user'
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState('')
-  const replaceMessagesAfter = useChatStore((s) => s.replaceMessagesAfter)
-  const { editAndResend, regenerateResponse } = useChat()
+  const { editAndResend, regenerateResponse, forkConversation } = useChat()
   const { isSpeaking, speak, stopSpeaking } = useVoice()
 
   const rawContent = isStreaming ? streamingContent || '' : message.content
@@ -66,6 +64,10 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
   const handleRegenerate = useCallback(() => {
     regenerateResponse(message)
   }, [message, regenerateResponse])
+
+  const handleFork = useCallback(() => {
+    forkConversation(message.id)
+  }, [message.id, forkConversation])
 
   const toggleSpeak = useCallback(() => {
     if (isSpeaking) {
@@ -188,6 +190,13 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
                 </button>
               </>
             )}
+            <button
+              onClick={handleFork}
+              className="p-1 rounded-md text-gray-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-colors"
+              title="Fork conversation from here"
+            >
+              <GitBranch className="h-3.5 w-3.5" />
+            </button>
           </div>
         )}
       </div>

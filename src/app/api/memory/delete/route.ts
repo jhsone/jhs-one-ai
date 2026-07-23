@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase as createClient } from '@/lib/supabase/server'
+import { rateLimitMiddleware } from '@/lib/rate-limit'
 
-// DELETE /api/memory/delete - Delete a specific memory item
 export async function DELETE(request: Request) {
+  const rateLimitResponse = rateLimitMiddleware(request, 20, 60_000)
+  if (rateLimitResponse) return rateLimitResponse
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()

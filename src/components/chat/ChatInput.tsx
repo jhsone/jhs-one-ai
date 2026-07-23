@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Square, Paperclip, Camera, Image, File as FileIcon, X, Mic, MicOff } from 'lucide-react'
+import { Send, Square, Paperclip, Camera, Image, File as FileIcon, X, Mic, MicOff, Globe, Radio } from 'lucide-react'
 import { useChatStore } from '@/store/chat-store'
 import { useChat } from '@/lib/hooks/useChat'
 import { useVoice } from '@/lib/hooks/useVoice'
@@ -13,6 +13,7 @@ import { t } from '@/lib/i18n'
 export function ChatInput() {
   const [input, setInput] = useState('')
   const [showAttach, setShowAttach] = useState(false)
+  const [webSearch, setWebSearch] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -40,37 +41,97 @@ export function ChatInput() {
     }
   }, [transcript])
 
+  const [isRecording, setIsRecording] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const file = new File([blob], `recording-${Date.now()}.webm`, { type: 'audio/webm' })
+
+        let convId = currentConversationId
+        if (!convId) {
+          convId = await createConversation()
+          if (!convId) return
+        }
+
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('conversation_id', convId)
+
+        try {
+          const res = await fetch('/api/upload', { method: 'POST', body: formData })
+          if (res.ok) {
+            const data = await res.json()
+            addPendingAttachment({
+              id: `audio-${Date.now()}`,
+              file,
+              previewUrl: '',
+              fileType: 'audio',
+              fileName: file.name,
+              fileSize: file.size,
+              progress: 100,
+              status: 'done',
+              result: data.attachment,
+            })
+          }
+        } catch {}
+
+        stream.getTracks().forEach(t => t.stop())
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch {}
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    setIsRecording(false)
+  }
+
   const handleAttachFiles = async (files: FileList | null) => {
     if (!files) return
     setShowAttach(false)
 
-    for (const file of Array.from(files)) {
+    const fileArray = Array.from(files).slice(0, 10) // Max 10 files
+    if (fileArray.length === 0) return
+
+    let convId = currentConversationId
+    if (!convId) {
+      convId = await createConversation()
+      if (!convId) return
+    }
+
+    const uploads = fileArray.map(async (file) => {
       const validation = FileProcessor.validate(file)
-      if (!validation.valid) continue
+      if (!validation.valid) return
 
       const metadata = FileProcessor.identify(file)
       const previewUrl = FileProcessor.generatePreviewUrl(file)
 
       const id = `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
       addPendingAttachment({
-        id,
-        file,
-        previewUrl,
+        id, file, previewUrl,
         fileType: metadata.fileType,
         fileName: metadata.fileName,
         fileSize: metadata.fileSize,
         progress: 0,
         status: 'pending',
       })
-
-      let convId = currentConversationId
-      if (!convId) {
-        convId = await createConversation()
-        if (!convId) {
-          removePendingAttachment(id)
-          return
-        }
-      }
 
       updatePendingAttachment(id, { status: 'uploading' })
 
@@ -99,18 +160,13 @@ export function ChatInput() {
           xhr.send(formData)
         })
 
-        updatePendingAttachment(id, {
-          status: 'done',
-          progress: 100,
-          result: result.attachment,
-        })
+        updatePendingAttachment(id, { status: 'done', progress: 100, result: result.attachment })
       } catch (err: any) {
-        updatePendingAttachment(id, {
-          status: 'error',
-          error: err.message || 'Upload failed',
-        })
+        updatePendingAttachment(id, { status: 'error', error: err.message || 'Upload failed' })
       }
-    }
+    })
+
+    await Promise.all(uploads)
   }
 
   const handleSubmit = async () => {
@@ -135,8 +191,10 @@ export function ChatInput() {
     clearPendingAttachments()
 
     try {
-      await sendMessage(trimmed || ' ', attachmentIds?.length ? attachmentIds : undefined)
-    } catch {}
+      await sendMessage(trimmed || ' ', attachmentIds?.length ? attachmentIds : undefined, webSearch)
+    } finally {
+      setWebSearch(false)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -171,6 +229,7 @@ export function ChatInput() {
                   progress={att.progress}
                   status={att.status}
                   error={att.error}
+                  result={att.result}
                   onRemove={removeAttachment}
                 />
               </div>
@@ -241,6 +300,21 @@ export function ChatInput() {
             />
           </div>
 
+          {/* Web Search toggle */}
+          <button
+            onClick={() => setWebSearch(!webSearch)}
+            className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+              webSearch
+                ? 'bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400'
+                : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
+            }`}
+            aria-label="Search web"
+            disabled={isStreaming}
+            title={webSearch ? 'Web search on' : 'Web search off'}
+          >
+            <Globe className="h-4 w-4" />
+          </button>
+
           {/* Voice input button */}
           {voiceSupported && (
             <button
@@ -256,6 +330,20 @@ export function ChatInput() {
               {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
           )}
+
+          {/* Audio record button */}
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+              isRecording
+                ? 'bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 animate-pulse'
+                : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
+            }`}
+            aria-label={isRecording ? 'Stop audio recording' : 'Record audio'}
+            disabled={isStreaming}
+          >
+            {isRecording ? <Radio className="h-4 w-4" /> : <Radio className="h-4 w-4" />}
+          </button>
 
           <textarea
             ref={textareaRef}

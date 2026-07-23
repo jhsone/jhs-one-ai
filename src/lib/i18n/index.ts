@@ -1,52 +1,303 @@
-import { en } from './en'
-import { bn } from './bn'
+type Lang = 'en' | 'bn'
 
-type DeepValue<T, K extends string> = K extends keyof T
-  ? T[K]
-  : K extends `${infer K1}.${infer K2}`
-    ? K1 extends keyof T
-      ? DeepValue<T[K1], K2>
-      : string
-    : string
+const en: Record<string, string> = {
+  // App
+  'app.name': 'JHS One AI',
+  'app.loading': 'Loading...',
+  'app.open_menu': 'Open menu',
 
-const translations = { en, bn } as const
-type Lang = keyof typeof translations
+  // Landing
+  'landing.hero_title': 'Your Intelligent AI Assistant',
+  'landing.hero_subtitle': 'Powered by multiple AI engines for accurate, fast, and reliable responses.',
+  'landing.powered_by': 'Powered by JH Soft Corporation',
+  'landing.get_started': 'Get Started',
+  'landing.config_title': 'Configure Your AI',
+  'landing.config_desc': 'Set up your preferred AI providers and customize your experience.',
+  'landing.config_hint': 'You can configure API keys in Settings.',
+
+  // Login
+  'login.title': 'Sign in to JHS One AI',
+  'login.subtitle': 'Your intelligent AI assistant awaits',
+  'login.sign_in_google': 'Sign in with Google',
+
+  // Chat
+  'chat.placeholder': 'Type a message...',
+  'chat.disclaimer': 'AI responses may not always be accurate. Verify important information.',
+  'chat.thinking': 'Thinking',
+  'chat.welcome_title': 'Welcome to JHS One AI',
+  'chat.welcome_subtitle': 'Ask anything, upload documents, or search the web.',
+  'chat.welcome_suggestions': 'Try asking:',
+  'chat.copy': 'Copy',
+  'chat.copied': 'Copied!',
+  'chat.code_label': 'Code',
+  'chat.delete': 'Delete',
+  'chat.rename': 'Rename',
+  'chat.dismiss': 'Dismiss',
+
+  // Sidebar
+  'sidebar.tagline': 'JH Soft Corporation',
+  'sidebar.new_chat': 'New Chat',
+  'sidebar.search': 'Search conversations...',
+  'sidebar.no_history': 'No conversations yet',
+  'sidebar.no_results': 'No conversations found',
+  'sidebar.user_label': 'User',
+  'sidebar.pin': 'Pin',
+  'sidebar.share': 'Share',
+
+  // Settings
+  'settings.title': 'Settings',
+  'settings.general': 'General',
+  'settings.chat': 'Chat',
+  'settings.theme': 'Theme',
+  'settings.language': 'Language',
+  'settings.notifications': 'Notifications',
+  'settings.about': 'About',
+  'settings.version': 'Version',
+  'settings.website': 'Website',
+  'settings.github': 'GitHub',
+  'settings.founder': 'Founder & Lead Developer',
+  'settings.powered_by': 'Powered by JH Soft Corporation',
+  'settings.privacy': 'Privacy Policy',
+  'settings.terms': 'Terms of Service',
+  'settings.email': 'Email',
+  'settings.timezone': 'Timezone',
+  'settings.streaming': 'Streaming responses',
+  'settings.auto_scroll': 'Auto-scroll to new messages',
+  'settings.markdown': 'Markdown rendering',
+  'settings.code_blocks': 'Code block highlighting',
+  'settings.response_style': 'Response style',
+  'settings.export_chats': 'Export Chats',
+  'settings.data_controls': 'Data Controls',
+  'settings.delete_history': 'Delete History',
+  'settings.push': 'Push notifications',
+  'settings.desktop': 'Desktop notifications',
+
+  // Profile
+  'profile.edit_profile': 'Edit Profile',
+  'profile.user_id': 'User ID',
+  'profile.member_since': 'Member since',
+  'profile.language': 'Language',
+  'profile.theme': 'Theme',
+  'profile.free_plan': 'Free Plan',
+  'profile.usage': 'Usage',
+  'profile.api_keys': 'API Keys',
+  'profile.connected_providers': 'Connected Providers',
+  'profile.devices': 'Devices',
+  'profile.logout': 'Sign Out',
+  'profile.coming_soon': 'Coming Soon',
+
+  // Admin
+  'admin.admin_header': 'Admin Panel',
+  'admin.company': 'JH Soft Corporation',
+  'admin.back_to_chat': 'Back to Chat',
+  'admin.dashboard': 'Dashboard',
+  'admin.users_heading': 'Users',
+  'admin.messages_heading': 'Messages',
+  'admin.settings': 'Settings',
+  'admin.api_keys_label': 'API Keys',
+  'admin.system_prompt': 'System Prompt',
+  'admin.provider_status': 'Provider Status',
+  'admin.quick_actions': 'Quick Actions',
+  'admin.total_messages': 'Total Messages',
+  'admin.total_api_keys': 'Total API Keys',
+  'admin.total': 'Total',
+  'admin.today': 'Today',
+  'admin.system_info': 'System Info',
+  'admin.system_online': 'Online',
+  'admin.admin_access': 'Admin Access',
+  'admin.admin_access_desc': 'Add emails to grant admin access',
+  'admin.recent_messages': 'Recent Messages',
+  'admin.no_data': 'No data available',
+  'admin.no_users': 'No users found',
+  'admin.no_errors': 'No errors',
+  'admin.errors': 'Errors',
+  'admin.name': 'Name',
+  'admin.joined': 'Joined',
+  'admin.enabled': 'Enabled',
+  'admin.disabled': 'Disabled',
+  'admin.configured': 'Configured',
+  'admin.none_configured': 'None configured',
+  'admin.key_summary': 'Key Summary',
+  'admin.keys_active': 'Active',
+  'admin.toggle_providers': 'Toggle Providers',
+  'admin.manage_providers': 'Manage Providers',
+  'admin.current_admins': 'Current Admins',
+  'admin.update_admin_hint': 'Add email addresses separated by commas',
+  'admin.avg_per_day': 'Avg per day',
+  'admin.company_label': 'Company',
+  'admin.product_label': 'Product',
+  'admin.ai_providers': 'AI Providers',
+  'admin.vision': 'Vision',
+  'admin.documents': 'Documents',
+  'admin.memory': 'Memory',
+  'admin.attachments': 'Attachments',
+  'admin.error_logs': 'Error Logs',
+  'admin.keys': 'Keys',
+  'admin.providers': 'Providers',
+  'admin.provider_health': 'Provider Health',
+  'admin.messages': 'Messages',
+  'admin.users': 'Users',
+  'admin.audit_logs': 'Audit Log',
+
+  // Language
+  'language.en': 'English',
+  'language.bn': 'বাংলা',
+  'language.select_language': 'Select Language',
+  'language.change': 'Change Language',
+}
+
+const bn: Record<string, string> = {
+  'app.name': 'জেএইচএস ওয়ান এআই',
+  'app.loading': 'লোড হচ্ছে...',
+  'app.open_menu': 'মেনু খুলুন',
+
+  'landing.hero_title': 'আপনার বুদ্ধিমান এআই সহায়ক',
+  'landing.hero_subtitle': 'একাধিক এআই ইঞ্জিন দ্বারা চালিত নির্ভুল, দ্রুত এবং বিশ্বস্ত উত্তর।',
+  'landing.powered_by': 'জেএইচ সফট কর্পোরেশন',
+  'landing.get_started': 'শুরু করুন',
+  'landing.config_title': 'আপনার এআই কনফিগার করুন',
+  'landing.config_desc': 'আপনার পছন্দের এআই প্রোভাইডার সেট আপ করুন এবং অভিজ্ঞতা কাস্টমাইজ করুন।',
+  'landing.config_hint': 'আপনি সেটিংসে এপিআই কী কনফিগার করতে পারেন।',
+
+  'login.title': 'জেএইচএস ওয়ান এআই-তে সাইন ইন করুন',
+  'login.subtitle': 'আপনার বুদ্ধিমান এআই সহায়ক অপেক্ষা করছে',
+  'login.sign_in_google': 'গুগল দিয়ে সাইন ইন করুন',
+
+  'chat.placeholder': 'একটি বার্তা লিখুন...',
+  'chat.disclaimer': 'এআই উত্তর সবসময় নির্ভুল নাও হতে পারে। গুরুত্বপূর্ণ তথ্য যাচাই করুন।',
+  'chat.thinking': 'ভাবছে',
+  'chat.welcome_title': 'জেএইচএস ওয়ান এআই-এ স্বাগতম',
+  'chat.welcome_subtitle': 'যেকোনো কিছু জিজ্ঞাসা করুন, ডকুমেন্ট আপলোড করুন, বা ওয়েব সার্চ করুন।',
+  'chat.welcome_suggestions': 'জিজ্ঞাসা করতে পারেন:',
+  'chat.copy': 'কপি',
+  'chat.copied': 'কপি করা হয়েছে!',
+  'chat.code_label': 'কোড',
+  'chat.delete': 'মুছুন',
+  'chat.rename': 'নাম পরিবর্তন',
+  'chat.dismiss': 'বন্ধ করুন',
+
+  'sidebar.tagline': 'জেএইচ সফট কর্পোরেশন',
+  'sidebar.new_chat': 'নতুন চ্যাট',
+  'sidebar.search': 'কথোপকথন খুঁজুন...',
+  'sidebar.no_history': 'কোনো কথোপকথন নেই',
+  'sidebar.no_results': 'কোনো কথোপকথন পাওয়া যায়নি',
+  'sidebar.user_label': 'ব্যবহারকারী',
+  'sidebar.pin': 'পিন',
+  'sidebar.share': 'শেয়ার',
+
+  'settings.title': 'সেটিংস',
+  'settings.general': 'সাধারণ',
+  'settings.chat': 'চ্যাট',
+  'settings.theme': 'থিম',
+  'settings.language': 'ভাষা',
+  'settings.notifications': 'বিজ্ঞপ্তি',
+  'settings.about': 'সম্পর্কে',
+  'settings.version': 'ভার্সন',
+  'settings.website': 'ওয়েবসাইট',
+  'settings.github': 'গিটহাব',
+  'settings.founder': 'প্রতিষ্ঠাতা ও প্রধান ডেভেলপার',
+  'settings.powered_by': 'জেএইচ সফট কর্পোরেশন',
+  'settings.privacy': 'গোপনীয়তা নীতি',
+  'settings.terms': 'সেবার শর্তাবলী',
+  'settings.email': 'ইমেইল',
+  'settings.timezone': 'টাইমজোন',
+  'settings.streaming': 'স্ট্রিমিং রেসপন্স',
+  'settings.auto_scroll': 'নতুন বার্তায় অটো-স্ক্রল',
+  'settings.markdown': 'মার্কডাউন রেন্ডারিং',
+  'settings.code_blocks': 'কোড ব্লক হাইলাইটিং',
+  'settings.response_style': 'উত্তর শৈলী',
+  'settings.export_chats': 'চ্যাট এক্সপোর্ট',
+  'settings.data_controls': 'ডেটা নিয়ন্ত্রণ',
+  'settings.delete_history': 'ইতিহাস মুছুন',
+  'settings.push': 'পুশ বিজ্ঞপ্তি',
+  'settings.desktop': 'ডেস্কটপ বিজ্ঞপ্তি',
+
+  'profile.edit_profile': 'প্রোফাইল সম্পাদনা',
+  'profile.user_id': 'ইউজার আইডি',
+  'profile.member_since': 'সদস্য since',
+  'profile.language': 'ভাষা',
+  'profile.theme': 'থিম',
+  'profile.free_plan': 'ফ্রি প্ল্যান',
+  'profile.usage': 'ব্যবহার',
+  'profile.api_keys': 'এপিআই কী',
+  'profile.connected_providers': 'সংযুক্ত প্রোভাইডার',
+  'profile.devices': 'ডিভাইস',
+  'profile.logout': 'সাইন আউট',
+  'profile.coming_soon': 'শীঘ্রই আসছে',
+
+  'admin.admin_header': 'অ্যাডমিন প্যানেল',
+  'admin.company': 'জেএইচ সফট কর্পোরেশন',
+  'admin.back_to_chat': 'চ্যাটে ফিরুন',
+  'admin.dashboard': 'ড্যাশবোর্ড',
+  'admin.users_heading': 'ব্যবহারকারী',
+  'admin.messages_heading': 'বার্তা',
+  'admin.settings': 'সেটিংস',
+  'admin.api_keys_label': 'এপিআই কী',
+  'admin.system_prompt': 'সিস্টেম প্রম্পট',
+  'admin.provider_status': 'প্রোভাইডার স্ট্যাটাস',
+  'admin.quick_actions': 'দ্রুত কর্ম',
+  'admin.total_messages': 'মোট বার্তা',
+  'admin.total_api_keys': 'মোট এপিআই কী',
+  'admin.total': 'মোট',
+  'admin.today': 'আজ',
+  'admin.system_info': 'সিস্টেম তথ্য',
+  'admin.system_online': 'অনলাইন',
+  'admin.admin_access': 'অ্যাডমিন অ্যাক্সেস',
+  'admin.admin_access_desc': 'অ্যাডমিন অ্যাক্সেস দিতে ইমেইল যোগ করুন',
+  'admin.recent_messages': 'সাম্প্রতিক বার্তা',
+  'admin.no_data': 'কোনো তথ্য নেই',
+  'admin.no_users': 'কোনো ব্যবহারকারী পাওয়া যায়নি',
+  'admin.no_errors': 'কোনো ত্রুটি নেই',
+  'admin.errors': 'ত্রুটি',
+  'admin.name': 'নাম',
+  'admin.joined': 'যোগদান',
+  'admin.enabled': 'সক্রিয়',
+  'admin.disabled': 'নিষ্ক্রিয়',
+  'admin.configured': 'কনফিগার করা',
+  'admin.none_configured': 'কিছু কনফিগার করা হয়নি',
+  'admin.key_summary': 'কী সারসংক্ষেপ',
+  'admin.keys_active': 'সক্রিয়',
+  'admin.toggle_providers': 'প্রোভাইডার টগল',
+  'admin.manage_providers': 'প্রোভাইডার ব্যবস্থাপনা',
+  'admin.current_admins': 'বর্তমান অ্যাডমিন',
+  'admin.update_admin_hint': 'কমা দিয়ে আলাদা করে ইমেইল ঠিকানা লিখুন',
+  'admin.avg_per_day': 'প্রতিদিন গড়',
+  'admin.company_label': 'কোম্পানি',
+  'admin.product_label': 'পণ্য',
+  'admin.ai_providers': 'এআই প্রোভাইডার',
+  'admin.vision': 'ভিশন',
+  'admin.documents': 'ডকুমেন্ট',
+  'admin.memory': 'মেমোরি',
+  'admin.attachments': 'অ্যাটাচমেন্ট',
+  'admin.error_logs': 'এরর লগ',
+  'admin.keys': 'কী',
+  'admin.providers': 'প্রোভাইডার',
+  'admin.provider_health': 'প্রোভাইডার স্বাস্থ্য',
+  'admin.messages': 'বার্তা',
+  'admin.users': 'ব্যবহারকারী',
+  'admin.audit_logs': 'অডিট লগ',
+
+  'language.en': 'ইংরেজি',
+  'language.bn': 'বাংলা',
+  'language.select_language': 'ভাষা নির্বাচন করুন',
+  'language.change': 'ভাষা পরিবর্তন',
+}
 
 let currentLang: Lang = 'en'
+let translations: Record<string, string> = en
 
-export function setLanguage(lang: 'en' | 'bn') {
+export function setLanguage(lang: Lang) {
   currentLang = lang
+  translations = lang === 'bn' ? bn : en
   if (typeof document !== 'undefined') {
     document.documentElement.lang = lang === 'bn' ? 'bn' : 'en'
   }
 }
 
-export function getCurrentLanguage(): Lang {
+export function getLanguage(): Lang {
   return currentLang
 }
 
-export function t(path: string): any {
-  const keys = path.split('.')
-  let result: any = translations[currentLang]
-
-  for (const key of keys) {
-    if (result && typeof result === 'object' && key in result) {
-      result = result[key]
-    } else {
-      const fallback: any = translations['en']
-      let fb = fallback
-      for (const k of keys) {
-        if (fb && typeof fb === 'object' && k in fb) {
-          fb = fb[k]
-        } else {
-          return path
-        }
-      }
-      return typeof fb === 'string' || Array.isArray(fb) ? fb : path
-    }
-  }
-
-  return typeof result === 'string' || Array.isArray(result) ? result : path
+export function t(key: string, fallback?: string): string {
+  return translations[key] || fallback || key
 }
-
-export { en, bn }

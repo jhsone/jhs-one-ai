@@ -206,6 +206,18 @@ export default function SettingsPage() {
               >
                 Markdown
               </button>
+              <button
+                onClick={() => window.open('/api/conversations/export?format=csv', '_blank')}
+                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline px-2 py-1 bg-blue-50 dark:bg-blue-950/40 rounded"
+              >
+                CSV
+              </button>
+              <button
+                onClick={() => window.open('/api/conversations/export?format=pdf', '_blank')}
+                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline px-2 py-1 bg-blue-50 dark:bg-blue-950/40 rounded"
+              >
+                PDF
+              </button>
             </div>
           ),
         },

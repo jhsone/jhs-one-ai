@@ -3,8 +3,11 @@ import { createServerSupabase } from '@/lib/supabase/server'
 import { uploadToCloudinary } from '@/lib/upload/upload'
 import { FileProcessor } from '@/lib/upload/file-processor'
 import { SUPPORTED_TYPES } from '@/lib/upload/types'
+import { rateLimitMiddleware } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  const rateLimitResponse = rateLimitMiddleware(req, 10, 60_000)
+  if (rateLimitResponse) return rateLimitResponse
   try {
     const supabase = await createServerSupabase()
     const { data: { user } } = await supabase.auth.getUser()

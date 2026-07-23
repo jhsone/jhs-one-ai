@@ -3,11 +3,16 @@ import { createServerSupabase } from '@/lib/supabase/server'
 import { routeAIRequest } from '@/lib/ai/router'
 import { documentEngine } from '@/lib/document'
 import { detectDocumentType, isImageType } from '@/lib/document'
+import { rateLimitMiddleware } from '@/lib/rate-limit'
+import { searchWeb, formatWebResultsForContext } from '@/lib/web-search'
 import type { ChatRequest, ProviderName } from '@/types'
 import type { DocumentAttachment, ParserResult } from '@/lib/document'
 import type { VisionAttachment } from '@/lib/vision'
 
 export async function POST(req: NextRequest) {
+  const rateLimitResponse = rateLimitMiddleware(req, 20, 60_000)
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const supabase = await createServerSupabase()
     const { data: { user } } = await supabase.auth.getUser()
@@ -17,9 +22,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body: ChatRequest = await req.json()
-    const { message, conversation_id, attachment_ids } = body
+    const { message, conversation_id, attachment_ids, web_search } = body
 
-    console.log('[chat] message:', message.slice(0, 100), 'conv:', conversation_id, 'att_ids:', attachment_ids)
+    console.log('[chat] message:', message.slice(0, 100), 'conv:', conversation_id, 'att_ids:', attachment_ids, 'web_search:', web_search)
 
     if (!message || !conversation_id) {
       return new Response(JSON.stringify({ error: 'Message and conversation_id required' }), { status: 400 })
@@ -214,11 +219,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // --- Web Search ---
+    let webContext: string | undefined
+    if (web_search) {
+      try {
+        const searchResponse = await searchWeb(message, 5)
+        webContext = formatWebResultsForContext(searchResponse)
+        console.log('[chat] web search:', searchResponse.results.length, 'results')
+      } catch (err: any) {
+        console.warn('[chat] web search failed:', err.message)
+      }
+    }
+
     console.log('[chat] routeOptions:', JSON.stringify({
       hasDocs: !!routeOptions.documentAttachments,
       hasVision: !!routeOptions.attachments,
       useVision: routeOptions.useVision,
+      webSearch: !!webContext,
     }))
+
+    let augmentedMessage = message
+    if (webContext) {
+      augmentedMessage = `${webContext}\n\n---\n\nUser Question: ${message}\n\nUse the web search results above to answer the question. If the results don't contain enough information, say so clearly. Always cite sources using the <references> format.`
+    }
 
     const {
       stream,
@@ -235,7 +258,7 @@ export async function POST(req: NextRequest) {
       textLength,
       ocrUsed,
       parserUsed,
-    } = await routeAIRequest(message, history, activeProviders, routeOptions)
+    } = await routeAIRequest(augmentedMessage, history, activeProviders, routeOptions)
 
     console.log('[chat] routed to:', usedProvider, 'model:', usedModel, 'vision:', visionEnabled, 'doc:', documentEnabled)
 

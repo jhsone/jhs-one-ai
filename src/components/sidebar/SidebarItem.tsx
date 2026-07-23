@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MoreHorizontal, Trash2, Pencil, Pin, Share2 } from 'lucide-react'
+import { MoreHorizontal, Trash2, Pencil, Pin, Share2, Archive, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { formatDate } from '@/lib/utils/format'
 import { AiAvatar } from '@/components/shared/AiAvatar'
@@ -14,9 +14,12 @@ interface SidebarItemProps {
   onClick: () => void
   onRename: (title: string) => void
   onDelete: () => void
+  onShare?: (id: string) => void
+  onArchive?: (id: string) => void
+  onRestore?: (id: string) => void
 }
 
-export function SidebarItem({ conversation, isActive, onClick, onRename, onDelete }: SidebarItemProps) {
+export function SidebarItem({ conversation, isActive, onClick, onRename, onDelete, onShare, onArchive, onRestore }: SidebarItemProps) {
   const [showMenu, setShowMenu] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(conversation.title)
@@ -64,7 +67,16 @@ export function SidebarItem({ conversation, isActive, onClick, onRename, onDelet
     {
       label: t('sidebar.share'),
       icon: Share2,
-      onClick: () => setShowMenu(false),
+      onClick: () => { onShare?.(conversation.id); setShowMenu(false) },
+    },
+    {
+      label: conversation.archived ? 'Restore' : 'Archive',
+      icon: conversation.archived ? RotateCcw : Archive,
+      onClick: () => {
+        if (conversation.archived) onRestore?.(conversation.id)
+        else onArchive?.(conversation.id)
+        setShowMenu(false)
+      },
     },
     {
       label: t('chat.delete'),
@@ -105,6 +117,9 @@ export function SidebarItem({ conversation, isActive, onClick, onRename, onDelet
             <p className="text-sm font-medium truncate">{conversation.title}</p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
               {formatDate(conversation.updated_at)}
+              {conversation.message_count !== undefined && (
+                <span className="ml-2">· {conversation.message_count} msgs</span>
+              )}
             </p>
           </>
         )}

@@ -1,5 +1,26 @@
 import type { MemoryCategory, ExtractedMemory } from './types'
 
+// Common occupation/role patterns for robust "I am a/an" matching
+const OCCUPATION_PATTERNS = [
+  // Suffix-based roles: engineer, designer, developer, manager, analyst, etc.
+  /\b\w+(er|ist|ian|or|ant|ent|eer|man|ess|eer)\b/i,
+  // Known two-word role prefixes
+  /\b(software|data|web|full.?stack|frontend|backend|devops|system|network|security|product|project|program|sales|marketing|business|financial|research|machine learning|ai|ml|cloud|platform|quality|test|support|customer|community|content|creative|art|design|ux|ui|graphic|motion|video|photo|fashion|interior|industrial)\s+\w+/i,
+  // Known seniority/level prefixes
+  /\b(senior|junior|lead|principal|staff|associate|assistant|head|chief|director|vp|svp|evp|executive|coordinator|supervisor|manager)\s+\w+/i,
+  // Exact known role titles
+  /^(ceo|cto|coo|cfo|cmo|cro|cio|founder|cofounder|intern|freelancer|consultant|contractor|administrator|technician|operator|representative|agent|advisor|officer|engineer|scientist|researcher|professor|teacher|instructor|trainer|coach|lawyer|attorney|doctor|physician|nurse|surgeon|dentist|therapist|psychologist|accountant|auditor|architect|plumber|electrician|mechanic|carpenter|developer|designer|analyst|writer|editor|journalist|photographer|artist|musician|actor|director|producer|chef|cook|baker|pilot|driver|policeman|firefighter|soldier|farmer|gardener|librarian|economist|statistician|mathematician|physicist|chemist|biologist|pharmacist|veterinarian|optician|chiropractor|nutritionist|dietitian|counselor|priest|minister|rabbi|imam|monk|nun|missionary|volunteer|activist|advocate|lobbyist|politician|senator|congressman|governor|mayor|judge|prosecutor|paralegal|mediator|arbitrator|notary|bailiff|clerk|secretary|receptionist|apprentice|trainee|fellow|scholar|specialist|practitioner|provider|supplier|vendor|distributor|retailer|wholesaler|broker|dealer|trader|merchant|banker|lender|borrower|investor|financier|underwriter|actuary|adjuster|appraiser|assessor|surveyor|inspector|examiner|tester|bookkeeper|cashier|teller|typist|stenographer|transcriber|translator|interpreter|linguist|philologist|etymologist|lexicographer|terminologist)$/i
+]
+
+function isLikelyOccupation(text: string): boolean {
+  const trimmed = text.trim()
+  if (trimmed.length < 2 || trimmed.length > 60) return false
+  for (const pattern of OCCUPATION_PATTERNS) {
+    if (pattern.test(trimmed)) return true
+  }
+  return false
+}
+
 /**
  * Smart Memory Extractor: analyzes user message and chat conversation
  * to extract stable facts, explicit preferences, long-term goals, or ongoing projects.
@@ -10,7 +31,7 @@ export function extractMemoriesFromMessage(message: string, aiResponse?: string)
   const lowerMsg = message.toLowerCase().trim()
 
   // Ignore transient queries, greetings, or short prompts
-  if (lowerMsg.length < 5 || /^(hi|hello|hey|greetings|sup|good morning|good evening)\b/i.test(lowerMsg)) {
+  if (lowerMsg.length < 5 || /^(hi|hello|hey|greetings|sup)\s|^(good morning|good evening)\b/i.test(lowerMsg)) {
     return []
   }
 
@@ -27,9 +48,9 @@ export function extractMemoriesFromMessage(message: string, aiResponse?: string)
     }
   }
 
-  if (/\bi am a\s+([a-zA-Z\s]+)/i.test(message)) {
-    const match = message.match(/\bi am a\s+([a-zA-Z\s]+)/i)
-    if (match && match[1]) {
+  if (/\bi am a(?:n)?\s+([a-zA-Z\s]+)/i.test(message)) {
+    const match = message.match(/\bi am a(?:n)?\s+([a-zA-Z\s]+)/i)
+    if (match && match[1] && isLikelyOccupation(match[1])) {
       memories.push({
         category: 'profile',
         key: 'User Occupation',
@@ -65,7 +86,8 @@ export function extractMemoriesFromMessage(message: string, aiResponse?: string)
   }
 
   // Explicit preference or setting statements ("I prefer...", "I always want...")
-  if (/^i prefer\s+(.+)/i.test(message)) {
+  // Avoid double-capturing language/response-length preferences
+  if (/^i prefer\s+(?!(speaking|writing|communicating|to chat)\s+in|short\s|concise\s|detailed\s|long\s|explanatory\s)(.+)/i.test(message)) {
     const match = message.match(/^i prefer\s+(.+)/i)
     if (match && match[1]) {
       memories.push({

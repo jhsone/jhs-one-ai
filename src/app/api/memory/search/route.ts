@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase as createClient } from '@/lib/supabase/server'
 import { retrieveRelevantMemories } from '@/lib/memory/retrieval'
+import { rateLimitMiddleware } from '@/lib/rate-limit'
 
-// POST /api/memory/search - Search or retrieve relevant memories for a prompt
 export async function POST(request: Request) {
+  const rateLimitResponse = rateLimitMiddleware(request, 30, 60_000)
+  if (rateLimitResponse) return rateLimitResponse
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()

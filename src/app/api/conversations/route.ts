@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { logAuditServer } from '@/lib/audit'
 
 export async function GET() {
   const supabase = await createServerSupabase()
@@ -52,5 +53,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 })
 
   await supabase.from('conversations').delete().eq('id', id).eq('user_id', user.id)
+  await logAuditServer('delete', 'conversation', id)
   return NextResponse.json({ success: true })
 }

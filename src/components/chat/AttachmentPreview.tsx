@@ -1,6 +1,7 @@
 'use client'
 
-import { FileText, X, Loader2, AlertCircle } from 'lucide-react'
+import { FileText, X, Loader2, AlertCircle, Music } from 'lucide-react'
+import type { Attachment } from '@/types'
 
 interface AttachmentPreviewProps {
   id: string
@@ -11,6 +12,7 @@ interface AttachmentPreviewProps {
   progress: number
   status: 'pending' | 'uploading' | 'done' | 'error'
   error?: string
+  result?: Attachment
   onRemove: (id: string) => void
 }
 
@@ -29,9 +31,13 @@ export function AttachmentPreview({
   progress,
   status,
   error,
+  result,
   onRemove,
 }: AttachmentPreviewProps) {
   const isImage = fileType === 'image'
+  const isAudio = fileType === 'audio'
+
+  const icon = isImage ? null : isAudio ? <Music className="h-5 w-5 text-gray-500 dark:text-gray-400" /> : <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400" />
 
   return (
     <div className="flex items-center gap-3 p-2 pr-3 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 group relative overflow-hidden">
@@ -47,7 +53,7 @@ export function AttachmentPreview({
         {isImage && previewUrl ? (
           <img src={previewUrl} alt={fileName} className="w-full h-full object-cover" />
         ) : (
-          <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          icon
         )}
         {status === 'uploading' && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -73,6 +79,11 @@ export function AttachmentPreview({
               ? error || 'Upload failed'
               : formatSize(fileSize)}
         </p>
+        {isAudio && status === 'done' && result?.cloudinary_url && (
+          <audio controls className="w-full mt-1 h-8" src={result.cloudinary_url} preload="none">
+            Your browser does not support audio playback.
+          </audio>
+        )}
       </div>
 
       {/* Remove */}

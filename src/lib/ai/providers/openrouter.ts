@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { SYSTEM_PROMPT } from '../system-prompt'
+import { loadSystemPrompt } from '../system-prompt-loader'
 
 const OPENROUTER_MODEL = 'openai/gpt-4o-mini'
 
@@ -13,10 +13,12 @@ export async function callOpenRouter(
     baseURL: 'https://openrouter.ai/api/v1',
   })
 
+  const systemPrompt = await loadSystemPrompt()
+
   const stream = await client.chat.completions.create({
     model: OPENROUTER_MODEL,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       ...history.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
       { role: 'user', content: message },
     ],

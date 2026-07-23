@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { SYSTEM_PROMPT } from '../system-prompt'
+import { loadSystemPrompt } from '../system-prompt-loader'
 
 const SIMBANOVA_MODEL = 'nova-2'
 
@@ -13,10 +13,12 @@ export async function callSimbanova(
     baseURL: 'https://api.simbanova.com/v1',
   })
 
+  const systemPrompt = await loadSystemPrompt()
+
   const stream = await client.chat.completions.create({
     model: SIMBANOVA_MODEL,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       ...history.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
       { role: 'user', content: message },
     ],

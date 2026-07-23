@@ -5,11 +5,17 @@ import { useChat } from '@/lib/hooks/useChat'
 import { t } from '@/lib/i18n'
 import { AiAvatar } from '@/components/shared/AiAvatar'
 
+const suggestions = [
+  'What can you help me with?',
+  'Summarize a document',
+  'Write code in Python',
+  'Explain a concept',
+]
+
 const iconMap = [Sparkles, MessageSquare, Code, BookOpen]
 
 export function WelcomeScreen() {
   const { sendMessage, createConversation } = useChat()
-  const suggestions = t('chat.welcome_suggestions')
 
   const handleSuggestion = async (text: string) => {
     await createConversation()

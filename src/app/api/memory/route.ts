@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase as createClient } from '@/lib/supabase/server'
 import { extractMemoriesFromMessage, scoreAndFilterMemories } from '@/lib/memory/extractor'
+import { rateLimitMiddleware } from '@/lib/rate-limit'
 
 // GET /api/memory - List user memories or search
 export async function GET(request: Request) {
+  const rateLimitResponse = rateLimitMiddleware(request as Request, 30, 60_000)
+  if (rateLimitResponse) return rateLimitResponse
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -44,6 +47,8 @@ export async function GET(request: Request) {
 
 // POST /api/memory - Add or extract memory manually / automatically
 export async function POST(request: Request) {
+  const rateLimitResponse = rateLimitMiddleware(request, 20, 60_000)
+  if (rateLimitResponse) return rateLimitResponse
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()

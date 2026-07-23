@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Copy, Check, Download, Maximize2, Minimize2, WrapText } from 'lucide-react'
+import { Copy, Check, Download, Maximize2, Minimize2, WrapText, Play, Loader2, Terminal, X } from 'lucide-react'
 import { t } from '@/lib/i18n'
 
 const langExtensions: Record<string, string> = {
@@ -33,6 +33,8 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
   const [wordWrap, setWordWrap] = useState(false)
   const [html, setHtml] = useState('')
   const [showNumbers, setShowNumbers] = useState(true)
+  const [running, setRunning] = useState(false)
+  const [output, setOutput] = useState<{ stdout: string; stderr: string; exitCode: number } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -83,6 +85,25 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
     URL.revokeObjectURL(url)
   }
 
+  const handleRun = async () => {
+    setRunning(true)
+    setOutput(null)
+    try {
+      const res = await fetch('/api/sandbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, language }),
+      })
+      const data = await res.json()
+      setOutput({ stdout: data.output || '', stderr: data.error || '', exitCode: data.exitCode ?? 1 })
+    } catch {
+      setOutput({ stdout: '', stderr: 'Failed to execute code', exitCode: 1 })
+    }
+    setRunning(false)
+  }
+
+  const isRunnable = language && ['javascript', 'js', 'typescript', 'ts', 'python', 'py', 'bash', 'sh', 'shell'].includes(language.toLowerCase())
+
   const toolbar = (
     <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-2 min-w-0">
@@ -94,6 +115,17 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
         <span className="truncate ml-2 font-medium">{language || t('chat.code_label')}</span>
       </div>
       <div className="flex items-center gap-0.5">
+        {isRunnable && (
+          <button
+            onClick={handleRun}
+            disabled={running}
+            className="flex items-center gap-1 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-emerald-600 dark:text-emerald-400 disabled:opacity-50"
+            aria-label="Run code"
+            title="Run"
+          >
+            {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+          </button>
+        )}
         <button
           onClick={() => setShowNumbers(!showNumbers)}
           className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${showNumbers ? 'text-blue-500' : ''}`}
@@ -194,7 +226,28 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
               className={`flex-1 overflow-auto p-4 text-sm code-block ${showNumbers ? 'code-block--numbers' : ''} ${wordWrap ? 'code-block--word-wrap' : ''}`}
             >
               {codeContent}
+        </pre>
+        {output && (
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-900 text-gray-100 text-xs font-mono">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-gray-800 border-b border-gray-700">
+              <span className="flex items-center gap-1 text-gray-400">
+                <Terminal className="h-3 w-3" />
+                Output (exit: {output.exitCode})
+              </span>
+              <button
+                onClick={() => setOutput(null)}
+                className="p-0.5 rounded hover:bg-gray-700 text-gray-400 hover:text-gray-200"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+            <pre className="p-3 max-h-48 overflow-auto leading-relaxed">
+              {output.stdout && <span className="text-green-400">{output.stdout}</span>}
+              {output.stderr && <span className="text-red-400">{output.stderr}</span>}
+              {!output.stdout && !output.stderr && <span className="text-gray-500 italic">(no output)</span>}
             </pre>
+          </div>
+        )}
           </div>
         </div>
       )}

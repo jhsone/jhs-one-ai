@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Plus, Search, ChevronRight } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { Plus, Search, ChevronRight, MessageSquare, Archive, RotateCcw } from 'lucide-react'
 import { t } from '@/lib/i18n'
 import { SidebarItem } from './SidebarItem'
 import { AiAvatar } from '@/components/shared/AiAvatar'
@@ -10,9 +10,13 @@ import { useAuth } from '@/components/shared/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { useRouter } from 'next/navigation'
+import type { Message } from '@/types'
 
 export function Sidebar() {
   const [search, setSearch] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
+  const [messageResults, setMessageResults] = useState<{ convId: string; title: string; snippet: string }[]>([])
+  const [searching, setSearching] = useState(false)
   const router = useRouter()
   const { session } = useAuth()
   const {
@@ -29,9 +33,45 @@ export function Sidebar() {
     if (session?.user) loadConversations()
   }, [session, loadConversations])
 
-  const filtered = conversations.filter((c) =>
-    c.title.toLowerCase().includes(search.toLowerCase())
-  )
+  const doMessageSearch = useCallback(async (q: string) => {
+    if (q.length < 2) {
+      setMessageResults([])
+      return
+    }
+    setSearching(true)
+    try {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('messages')
+        .select('id, content, conversation_id')
+        .ilike('content', `%${q}%`)
+        .limit(20)
+
+      if (!data) { setMessageResults([]); return }
+
+      const convIds = [...new Set(data.map(m => m.conversation_id))]
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('id, title')
+        .in('id', convIds)
+
+      const convMap = new Map((convs || []).map(c => [c.id, c.title]))
+
+      const results = data.map(m => ({
+        convId: m.conversation_id,
+        title: convMap.get(m.conversation_id) || 'Untitled',
+        snippet: m.content.slice(0, 100),
+      }))
+
+      setMessageResults(results)
+    } catch {}
+    setSearching(false)
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => doMessageSearch(search), 300)
+    return () => clearTimeout(timer)
+  }, [search, doMessageSearch])
 
   const handleNewChat = () => createConversation()
   const handleDelete = async (id: string) => {
@@ -50,6 +90,45 @@ export function Sidebar() {
     router.push('/')
     router.refresh()
   }
+
+  const handleShare = async (convId: string) => {
+    try {
+      const res = await fetch('/api/shares', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversation_id: convId }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        await navigator.clipboard.writeText(data.url)
+      }
+    } catch {}
+  }
+
+  const handleArchive = async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('conversations').update({ archived: true }).eq('id', id)
+    updateConversation(id, { archived: true })
+  }
+
+  const handleRestore = async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('conversations').update({ archived: false }).eq('id', id)
+    updateConversation(id, { archived: false })
+  }
+
+  const activeConversations = conversations.filter(c => !c.archived)
+  const archivedConversations = conversations.filter(c => c.archived)
+
+  const filteredActive = activeConversations.filter((c) =>
+    c.title.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const filteredArchived = archivedConversations.filter((c) =>
+    c.title.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const hasMessageResults = search.length >= 2 && messageResults.length > 0
 
   const user = session?.user
   const avatarUrl = user?.user_metadata?.avatar_url
@@ -97,21 +176,92 @@ export function Sidebar() {
 
       {/* Conversation list */}
       <div className="flex-1 overflow-y-auto py-1.5 space-y-0.5">
-        {filtered.length === 0 ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-8 px-4">
-            {search ? t('sidebar.no_results') : t('sidebar.no_history')}
-          </p>
-        ) : (
-          filtered.map((conv) => (
-            <SidebarItem
-              key={conv.id}
-              conversation={conv}
-              isActive={conv.id === currentConversationId}
-              onClick={() => loadMessages(conv.id)}
-              onRename={(title) => handleRename(conv.id, title)}
-              onDelete={() => handleDelete(conv.id)}
-            />
-          ))
+        {hasMessageResults && (
+          <div className="px-3 py-1.5">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Message results
+            </p>
+          </div>
+        )}
+        {hasMessageResults && messageResults.map((r, i) => (
+          <button
+            key={`msg-${i}`}
+            onClick={() => {
+              loadMessages(r.convId)
+              setSearch('')
+            }}
+            className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors rounded-lg"
+          >
+            <div className="flex items-start gap-2">
+              <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{r.snippet}</p>
+              </div>
+            </div>
+          </button>
+        ))}
+        {!hasMessageResults && !search && (
+          <>
+            {filteredActive.length === 0 ? (
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-8 px-4">
+                {t('sidebar.no_history')}
+              </p>
+            ) : (
+              filteredActive.map((conv) => (
+                <SidebarItem
+                  key={conv.id}
+                  conversation={conv}
+                  isActive={conv.id === currentConversationId}
+                  onClick={() => loadMessages(conv.id)}
+                  onRename={(title) => handleRename(conv.id, title)}
+                  onDelete={() => handleDelete(conv.id)}
+                  onShare={handleShare}
+                  onArchive={handleArchive}
+                />
+              ))
+            )}
+            {archivedConversations.length > 0 && (
+              <>
+                <button
+                  onClick={() => setShowArchived(!showArchived)}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <Archive className="h-3.5 w-3.5" />
+                  {showArchived ? 'Hide archived' : `Show archived (${archivedConversations.length})`}
+                </button>
+                {showArchived && filteredArchived.map((conv) => (
+                  <SidebarItem
+                    key={conv.id}
+                    conversation={conv}
+                    isActive={conv.id === currentConversationId}
+                    onClick={() => loadMessages(conv.id)}
+                    onRename={(title) => handleRename(conv.id, title)}
+                    onDelete={() => handleDelete(conv.id)}
+                    onShare={handleShare}
+                    onRestore={handleRestore}
+                  />
+                ))}
+              </>
+            )}
+          </>
+        )}
+        {!hasMessageResults && search && (
+          <>
+            {filteredActive.map((conv) => (
+              <SidebarItem key={conv.id} conversation={conv} isActive={conv.id === currentConversationId}
+                onClick={() => loadMessages(conv.id)} onRename={(title) => handleRename(conv.id, title)}
+                onDelete={() => handleDelete(conv.id)} onShare={handleShare} onArchive={handleArchive} />
+            ))}
+            {filteredArchived.map((conv) => (
+              <SidebarItem key={conv.id} conversation={conv} isActive={conv.id === currentConversationId}
+                onClick={() => loadMessages(conv.id)} onRename={(title) => handleRename(conv.id, title)}
+                onDelete={() => handleDelete(conv.id)} onShare={handleShare} onRestore={handleRestore} />
+            ))}
+            {filteredActive.length === 0 && filteredArchived.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-8">{t('sidebar.no_results')}</p>
+            )}
+          </>
         )}
       </div>
 

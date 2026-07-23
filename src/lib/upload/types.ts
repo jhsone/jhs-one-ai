@@ -1,4 +1,4 @@
-export type FileType = 'image' | 'document' | 'other'
+export type FileType = 'image' | 'document' | 'audio' | 'other'
 
 export interface AttachmentRecord {
   id: string
@@ -41,6 +41,11 @@ export const SUPPORTED_TYPES: Record<string, FileType> = {
   'text/plain': 'document',
   'text/markdown': 'document',
   'text/x-markdown': 'document',
+  'audio/webm': 'audio',
+  'audio/mp3': 'audio',
+  'audio/mpeg': 'audio',
+  'audio/wav': 'audio',
+  'audio/ogg': 'audio',
 }
 
 export const MAX_FILE_SIZE = 20 * 1024 * 1024

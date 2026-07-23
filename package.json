@@ -6,10 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "tsx scripts/test-integration.ts",
+    "test:memory": "tsx scripts/test-memory.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@sentry/nextjs": "^10.67.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.7",
     "class-variance-authority": "^0.7.1",
@@ -44,6 +49,7 @@
     "pdf-lib": "^1.17.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

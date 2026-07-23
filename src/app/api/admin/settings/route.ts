@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, isAdmin } from '@/lib/supabase/server'
+import { logAuditServer } from '@/lib/audit'
 
 export async function GET() {
   const supabase = await createServerSupabase()
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
   if (!key) return NextResponse.json({ error: 'Key required' }, { status: 400 })
 
   await supabase.from('app_settings').upsert({ key, value, updated_at: new Date().toISOString() })
+
+  await logAuditServer('update', 'app_settings', key, { value })
 
   return NextResponse.json({ success: true })
 }

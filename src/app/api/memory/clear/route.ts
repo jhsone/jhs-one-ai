@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase as createClient } from '@/lib/supabase/server'
+import { rateLimitMiddleware } from '@/lib/rate-limit'
 
-// POST /api/memory/clear - Clear all memories for the user
 export async function POST(request: Request) {
+  const rateLimitResponse = rateLimitMiddleware(request, 5, 60_000)
+  if (rateLimitResponse) return rateLimitResponse
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()

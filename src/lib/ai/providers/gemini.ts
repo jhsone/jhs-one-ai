@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { SYSTEM_PROMPT } from '../system-prompt'
+import { loadSystemPrompt } from '../system-prompt-loader'
 
 const GEMINI_MODEL = 'gemini-2.0-flash'
 
@@ -9,9 +9,10 @@ export async function callGemini(
   history: { role: 'user' | 'assistant'; content: string }[]
 ): Promise<{ stream: ReadableStream; model: string }> {
   const genAI = new GoogleGenerativeAI(apiKey)
+  const systemPrompt = await loadSystemPrompt()
   const model = genAI.getGenerativeModel({
     model: GEMINI_MODEL,
-    systemInstruction: SYSTEM_PROMPT,
+    systemInstruction: systemPrompt,
   })
 
   const chat = model.startChat({

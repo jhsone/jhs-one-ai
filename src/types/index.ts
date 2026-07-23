@@ -13,6 +13,8 @@ export interface Conversation {
   title: string
   created_at: string
   updated_at: string
+  archived?: boolean
+  message_count?: number
 }
 
 export interface Message {
@@ -126,6 +128,7 @@ export interface ChatRequest {
   conversation_id: string | null
   history: { role: 'user' | 'assistant'; content: string }[]
   attachment_ids?: string[]
+  web_search?: boolean
 }
 
 export interface StreamChunk {

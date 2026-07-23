@@ -11,9 +11,8 @@ function streamAssistantResponse(
   supabase: ReturnType<typeof createClient>,
   convId: string,
   response: Response,
-  abortRef: React.MutableRefObject<AbortController | null>,
   onDone?: () => void
-) {
+): Promise<void> {
   return new Promise<void>(async (resolve) => {
     const reader = response.body?.getReader()
     if (!reader) throw new Error('No response stream')
@@ -91,13 +90,25 @@ export function useChat() {
   const loadConversations = useCallback(async () => {
     if (!session?.user) return
     const supabase = createClient()
-    const { data } = await supabase
+    const { data: convs } = await supabase
       .from('conversations')
-      .select('*')
+      .select('id, title, user_id, created_at, updated_at, archived')
       .eq('user_id', session.user.id)
       .order('updated_at', { ascending: false })
 
-    if (data) store.setConversations(data)
+    if (!convs) return
+
+    const convsWithCounts = await Promise.all(
+      convs.map(async (conv) => {
+        const { count } = await supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('conversation_id', conv.id)
+        return { ...conv, message_count: count || 0 }
+      })
+    )
+
+    store.setConversations(convsWithCounts)
   }, [store, session])
 
   const loadMessages = useCallback(async (conversationId: string) => {
@@ -135,7 +146,7 @@ export function useChat() {
     return null
   }, [store, session])
 
-  const sendMessage = useCallback(async (content: string, attachmentIds?: string[]) => {
+  const sendMessage = useCallback(async (content: string, attachmentIds?: string[], webSearch?: boolean) => {
     if (!session?.user) return
     const supabase = createClient()
 
@@ -179,13 +190,14 @@ export function useChat() {
           conversation_id: convId,
           history,
           attachment_ids: attachmentIds?.length ? attachmentIds : undefined,
+          web_search: webSearch || false,
         }),
         signal: abortRef.current.signal,
       })
 
       if (!response.ok) throw new Error('Failed to get response')
 
-      await streamAssistantResponse(store, supabase, convId!, response, abortRef)
+      await streamAssistantResponse(store, supabase, convId!, response)
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         store.setError(err.message || 'Something went wrong')
@@ -243,7 +255,7 @@ export function useChat() {
 
       if (!response.ok) throw new Error('Failed to get response')
 
-      await streamAssistantResponse(store, supabase, convId, response, abortRef)
+      await streamAssistantResponse(store, supabase, convId, response)
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         store.setError(err.message || 'Something went wrong')
@@ -304,13 +316,53 @@ export function useChat() {
 
       if (!response.ok) throw new Error('Failed to get response')
 
-      await streamAssistantResponse(store, supabase, convId, response, abortRef)
+      await streamAssistantResponse(store, supabase, convId, response)
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         store.setError(err.message || 'Something went wrong')
       }
       store.setIsStreaming(false)
     }
+  }, [store, session])
+
+  const forkConversation = useCallback(async (fromMessageId: number): Promise<string | null> => {
+    if (!session?.user) return null
+    const supabase = createClient()
+
+    const convId = store.currentConversationId
+    if (!convId) return null
+
+    const messages = store.messages
+    const forkIndex = messages.findIndex(m => m.id === fromMessageId)
+    if (forkIndex === -1) return null
+
+    const messagesToCopy = messages.slice(0, forkIndex + 1)
+
+    const { data: newConv, error } = await supabase
+      .from('conversations')
+      .insert({ user_id: session.user.id, title: `Fork: ${messagesToCopy[0]?.content?.slice(0, 40) || 'Chat'}` })
+      .select()
+      .maybeSingle()
+
+    if (error || !newConv) return null
+
+    const msgsForDb = messagesToCopy.map((m, i) => ({
+      conversation_id: newConv.id,
+      role: m.role,
+      content: m.content,
+      created_at: new Date(Date.now() + i * 1000).toISOString(),
+    }))
+
+    await supabase.from('messages').insert(msgsForDb)
+
+    store.addConversation(newConv)
+    store.setCurrentConversation(newConv.id)
+    store.setMessages(messagesToCopy.map(m => ({
+      ...m,
+      conversation_id: newConv.id,
+    })))
+
+    return newConv.id
   }, [store, session])
 
   const stopStreaming = useCallback(() => {
@@ -326,6 +378,7 @@ export function useChat() {
     sendMessage,
     editAndResend,
     regenerateResponse,
+    forkConversation,
     stopStreaming,
   }
 }

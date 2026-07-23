@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { LayoutDashboard, Users, MessageSquare, Key, Settings, AlertTriangle, BarChart3, Activity, Paperclip, Eye, FileText, Brain, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Users, MessageSquare, Key, Settings, AlertTriangle, BarChart3, Activity, Paperclip, Eye, FileText, Brain, LogOut, Menu, X, Globe, PenSquare, History } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { t } from '@/lib/i18n'
 import { AiAvatar } from '@/components/shared/AiAvatar'
@@ -22,6 +22,8 @@ const navItems = [
   { href: '/admin/attachments', labelKey: 'admin.attachments' as const, icon: Paperclip },
   { href: '/admin/error-logs', labelKey: 'admin.error_logs' as const, icon: AlertTriangle },
   { href: '/admin/settings', labelKey: 'admin.settings' as const, icon: Settings },
+  { href: '/admin/system-prompt', labelKey: 'admin.system_prompt' as const, icon: PenSquare },
+  { href: '/admin/audit-logs', labelKey: 'admin.audit_logs' as const, icon: History },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

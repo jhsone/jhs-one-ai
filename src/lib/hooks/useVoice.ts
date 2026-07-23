@@ -52,14 +52,22 @@ export function useVoice(): UseVoiceReturn {
     }
 
     const recognition = new SpeechRecognition()
-    recognition.continuous = false
-    recognition.interimResults = false
-    recognition.lang = 'en-US'
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.lang = 'bn-BD'
 
     recognition.onresult = (event: any) => {
-      const text = event.results[0][0].transcript
-      setTranscript(text)
-      setIsListening(false)
+      let finalText = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (result.isFinal) {
+          finalText += result[0].transcript
+        }
+      }
+      if (finalText) {
+        setTranscript(finalText)
+        setIsListening(false)
+      }
     }
 
     recognition.onerror = (event: any) => {
@@ -94,7 +102,16 @@ export function useVoice(): UseVoiceReturn {
 
       speechSynthRef.current.cancel()
       const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = 'en-US'
+
+      // Try to find a Bengali voice, fallback to any
+      const voices = speechSynthRef.current.getVoices()
+      const bnVoice = voices.find(v => v.lang.startsWith('bn'))
+      if (bnVoice) {
+        utterance.voice = bnVoice
+        utterance.lang = bnVoice.lang
+      } else {
+        utterance.lang = 'bn-BD'
+      }
       utterance.rate = 1.0
       utterance.pitch = 1.0
 

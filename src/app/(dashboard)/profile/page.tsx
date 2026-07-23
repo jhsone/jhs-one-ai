@@ -2,8 +2,8 @@
 
 import { useAuth } from '@/components/shared/AuthProvider'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { User, Mail, Calendar, Key, Layers, Smartphone, LogOut, Edit3, Loader2, Sparkles, Globe, Moon } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { User, Mail, Calendar, Key, Layers, Smartphone, LogOut, Edit3, Loader2, Sparkles, Globe, Moon, MessageSquare, MessageCircle, BarChart3, Upload, Camera, Check, BookOpen, Hash, TrendingUp, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { t } from '@/lib/i18n'
@@ -16,6 +16,23 @@ export default function ProfilePage() {
   const { language } = useAppStore()
   const { theme } = useTheme()
   const supabase = createClient()
+
+  const [usageStats, setUsageStats] = useState<{
+    conversations: { total: number; today: number; thisMonth: number }
+    messages: { total: number; today: number; thisMonth: number }
+  } | null>(null)
+
+  const [convStats, setConvStats] = useState<{
+    summary: { totalConversations: number; totalMessages: number; totalWords: number; avgMessagesPerConversation: number; avgWordsPerConversation: number }
+    dayDistribution: Record<string, number>
+    timeDistribution: Record<string, number>
+    topConversations: { id: string; title: string; totalMessages: number; totalWords: number }[]
+  } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/usage/stats').then(r => r.json()).then(setUsageStats).catch(() => {})
+    fetch('/api/conversations/stats').then(r => r.json()).then(setConvStats).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!isLoading && !session) router.push('/login')
@@ -87,6 +104,35 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* AI Avatar Upload */}
+        <div className="mb-6 bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">AI Avatar</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Customize the AI assistant avatar</p>
+            </div>
+            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors">
+              <Upload className="h-3.5 w-3.5" />
+              Upload
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const formData = new FormData()
+                  formData.append('file', file)
+                  try {
+                    const res = await fetch('/api/avatar', { method: 'POST', body: formData })
+                    if (res.ok) window.location.reload()
+                  } catch {}
+                }}
+              />
+            </label>
+          </div>
+        </div>
+
         {/* Info cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
@@ -118,6 +164,85 @@ export default function ProfilePage() {
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{theme}</p>
           </div>
         </div>
+
+        {/* Usage Stats */}
+        {usageStats && (
+          <div className="mb-6">
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
+              <BarChart3 className="h-3.5 w-3.5 inline mr-1" />
+              Usage
+            </h2>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{usageStats.messages.total}</p>
+                <p className="text-xs text-gray-500">Total Messages</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{usageStats.messages.today}</p>
+                <p className="text-xs text-gray-500">Today</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{usageStats.conversations.total}</p>
+                <p className="text-xs text-gray-500">Conversations</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Conversation Stats */}
+        {convStats && (
+          <div className="mb-6">
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
+              <BookOpen className="h-3.5 w-3.5 inline mr-1" />
+              Conversation Analytics
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{convStats.summary.totalConversations}</p>
+                <p className="text-xs text-gray-500">Conversations</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{convStats.summary.totalWords.toLocaleString()}</p>
+                <p className="text-xs text-gray-500">Total Words</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{convStats.summary.avgMessagesPerConversation}</p>
+                <p className="text-xs text-gray-500">Avg Msgs/Conv</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{convStats.summary.avgWordsPerConversation}</p>
+                <p className="text-xs text-gray-500">Avg Words/Conv</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+                <p className="text-xs text-gray-500 mb-2"><Clock className="h-3 w-3 inline mr-1" />By Time of Day</p>
+                <div className="space-y-1">
+                  {Object.entries(convStats.timeDistribution).sort(([,a], [,b]) => b - a).map(([time, count]) => (
+                    <div key={time} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600 dark:text-gray-400 capitalize w-20">{time}</span>
+                      <div className="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                        <div className="h-full rounded-full bg-blue-500" style={{ width: `${(count / Math.max(...Object.values(convStats.timeDistribution))) * 100}%` }} />
+                      </div>
+                      <span className="text-xs font-medium text-gray-900 dark:text-gray-100 w-6 text-right">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+                <p className="text-xs text-gray-500 mb-2"><Hash className="h-3 w-3 inline mr-1" />Top Conversations</p>
+                <div className="space-y-1.5">
+                  {convStats.topConversations.slice(0, 5).map((conv) => (
+                    <div key={conv.id} className="flex items-center justify-between">
+                      <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1 mr-2">{conv.title || 'Untitled'}</span>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0">{conv.totalMessages} msgs</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Connected providers / coming soon sections */}
         {sections.map((section) => (
