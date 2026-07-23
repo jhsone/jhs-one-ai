@@ -35,6 +35,8 @@ interface ChatState {
   addConversation: (conv: Conversation) => void
   updateConversation: (id: string, updates: Partial<Conversation>) => void
   removeConversation: (id: string) => void
+  updateMessage: (id: number, updates: Partial<Message>) => void
+  replaceMessagesAfter: (id: number, userMessage: Message) => void
   reset: () => void
   addPendingAttachment: (att: PendingAttachment) => void
   updatePendingAttachment: (id: string, updates: Partial<PendingAttachment>) => void
@@ -69,6 +71,16 @@ export const useChatStore = create<ChatState>((set) => ({
       conversations: s.conversations.filter((c) => c.id !== id),
       currentConversationId: s.currentConversationId === id ? null : s.currentConversationId,
     })),
+  updateMessage: (id: number, updates: Partial<Message>) =>
+    set((s) => ({
+      messages: s.messages.map((m) => (m.id === id ? { ...m, ...updates } : m)),
+    })),
+  replaceMessagesAfter: (id: number, userMessage: Message) =>
+    set((s) => {
+      const idx = s.messages.findIndex((m) => m.id === id)
+      if (idx === -1) return s
+      return { messages: [...s.messages.slice(0, idx + 1), userMessage] }
+    }),
   reset: () =>
     set({
       conversations: [],

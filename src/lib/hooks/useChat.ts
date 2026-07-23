@@ -6,6 +6,81 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/shared/AuthProvider'
 import type { Message } from '@/types'
 
+function streamAssistantResponse(
+  store: ReturnType<typeof useChatStore.getState>,
+  supabase: ReturnType<typeof createClient>,
+  convId: string,
+  response: Response,
+  abortRef: React.MutableRefObject<AbortController | null>,
+  onDone?: () => void
+) {
+  return new Promise<void>(async (resolve) => {
+    const reader = response.body?.getReader()
+    if (!reader) throw new Error('No response stream')
+
+    const decoder = new TextDecoder()
+    let fullResponse = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value)
+      const lines = chunk.split('\n')
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6))
+            if (data.type === 'text') {
+              fullResponse += data.content
+              store.appendStreamingContent(data.content)
+            } else if (data.type === 'done') {
+              const assistantMsg: Message = {
+                id: Date.now() + 1,
+                conversation_id: convId,
+                role: 'assistant',
+                content: fullResponse,
+                created_at: new Date().toISOString(),
+              }
+              store.addMessage(assistantMsg)
+              store.setIsStreaming(false)
+              store.setStreamingContent('')
+
+              await supabase.from('messages').insert({
+                conversation_id: convId,
+                role: 'assistant',
+                content: fullResponse,
+              })
+
+              await supabase
+                .from('conversations')
+                .update({ updated_at: new Date().toISOString() })
+                .eq('id', convId)
+
+              if (fullResponse.length > 10) {
+                const title = fullResponse.replace(/[^\w\s]/g, '').trim().slice(0, 60)
+                await supabase
+                  .from('conversations')
+                  .update({ title: title + (fullResponse.length > 60 ? '...' : '') })
+                  .eq('id', convId)
+                store.updateConversation(convId, { title: title + (fullResponse.length > 60 ? '...' : '') })
+              }
+              onDone?.()
+              resolve()
+            } else if (data.type === 'error') {
+              store.setError(data.content)
+              store.setIsStreaming(false)
+              resolve()
+            }
+          } catch (parseErr) { console.error('SSE parse error:', parseErr) }
+        }
+      }
+    }
+    resolve()
+  })
+}
+
 export function useChat() {
   const store = useChatStore()
   const abortRef = useRef<AbortController | null>(null)
@@ -108,65 +183,7 @@ export function useChat() {
 
       if (!response.ok) throw new Error('Failed to get response')
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No response stream')
-
-      const decoder = new TextDecoder()
-      let fullResponse = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6))
-              if (data.type === 'text') {
-                fullResponse += data.content
-                store.appendStreamingContent(data.content)
-              } else if (data.type === 'done') {
-                const assistantMsg: Message = {
-                  id: Date.now() + 1,
-                  conversation_id: convId!,
-                  role: 'assistant',
-                  content: fullResponse,
-                  created_at: new Date().toISOString(),
-                }
-                store.addMessage(assistantMsg)
-                store.setIsStreaming(false)
-                store.setStreamingContent('')
-
-                await supabase.from('messages').insert({
-                  conversation_id: convId,
-                  role: 'assistant',
-                  content: fullResponse,
-                })
-
-                await supabase
-                  .from('conversations')
-                  .update({ updated_at: new Date().toISOString() })
-                  .eq('id', convId)
-
-                if (fullResponse.length > 10) {
-                  const title = fullResponse.replace(/[^\w\s]/g, '').trim().slice(0, 60)
-                  await supabase
-                    .from('conversations')
-                    .update({ title: title + (fullResponse.length > 60 ? '...' : '') })
-                    .eq('id', convId)
-                  store.updateConversation(convId!, { title: title + (fullResponse.length > 60 ? '...' : '') })
-                }
-              } else if (data.type === 'error') {
-                store.setError(data.content)
-                store.setIsStreaming(false)
-              }
-            } catch (parseErr) { console.error('SSE parse error:', parseErr) }
-          }
-        }
-      }
+      await streamAssistantResponse(store, supabase, convId!, response, abortRef)
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         store.setError(err.message || 'Something went wrong')
@@ -174,6 +191,120 @@ export function useChat() {
       store.setIsStreaming(false)
     }
   }, [store, createConversation, session])
+
+  /**
+   * Edit and resend a user message: update content locally + DB, remove subsequent
+   * AI messages, and re-trigger AI response from the edited message.
+   */
+  const editAndResend = useCallback(async (originalMsg: Message, newContent: string) => {
+    if (!session?.user) return
+    if (originalMsg.role !== 'user') return
+
+    const supabase = createClient()
+    const convId = originalMsg.conversation_id
+
+    // Update the user message content in local store and DB
+    store.updateMessage(originalMsg.id, { content: newContent })
+    await supabase
+      .from('messages')
+      .update({ content: newContent })
+      .eq('id', originalMsg.id)
+
+    store.setIsStreaming(true)
+    store.setStreamingContent('')
+    store.setError(null)
+
+    // Build history up to (and including) the edited message
+    const msgs = useChatStore.getState().messages
+    const editIdx = msgs.findIndex(m => m.id === originalMsg.id)
+    const history = msgs.slice(0, editIdx + 1).map(m => ({
+      role: m.role,
+      content: m.content,
+    }))
+
+    try {
+      abortRef.current = new AbortController()
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: newContent,
+          conversation_id: convId,
+          history,
+        }),
+        signal: abortRef.current.signal,
+      })
+
+      if (!response.ok) throw new Error('Failed to get response')
+
+      await streamAssistantResponse(store, supabase, convId, response, abortRef)
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        store.setError(err.message || 'Something went wrong')
+      }
+      store.setIsStreaming(false)
+    }
+  }, [store, session])
+
+  /**
+   * Regenerate the last AI response by resending the preceding user message.
+   */
+  const regenerateResponse = useCallback(async (assistantMsg: Message) => {
+    if (!session?.user) return
+    if (assistantMsg.role !== 'assistant') return
+
+    const supabase = createClient()
+    const convId = assistantMsg.conversation_id
+
+    const msgs = useChatStore.getState().messages
+    const idx = msgs.findIndex(m => m.id === assistantMsg.id)
+
+    // Find the preceding user message
+    const userMsgIdx = idx
+    let userMsg: Message | null = null
+    for (let i = idx - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user') {
+        userMsg = msgs[i]
+        break
+      }
+    }
+    if (!userMsg) return
+
+    // Remove old assistant response from store (but keep in DB for auditing)
+    store.replaceMessagesAfter(userMsg.id, { ...userMsg })
+
+    store.setIsStreaming(true)
+    store.setStreamingContent('')
+    store.setError(null)
+
+    const history = msgs.slice(0, userMsgIdx).map(m => ({
+      role: m.role,
+      content: m.content,
+    }))
+
+    try {
+      abortRef.current = new AbortController()
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMsg.content,
+          conversation_id: convId,
+          history,
+        }),
+        signal: abortRef.current.signal,
+      })
+
+      if (!response.ok) throw new Error('Failed to get response')
+
+      await streamAssistantResponse(store, supabase, convId, response, abortRef)
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        store.setError(err.message || 'Something went wrong')
+      }
+      store.setIsStreaming(false)
+    }
+  }, [store, session])
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort()
@@ -186,6 +317,8 @@ export function useChat() {
     loadMessages,
     createConversation,
     sendMessage,
+    editAndResend,
+    regenerateResponse,
     stopStreaming,
   }
 }

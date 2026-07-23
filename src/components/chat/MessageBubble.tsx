@@ -1,13 +1,16 @@
 'use client'
 
+import { useState, useCallback } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { User } from 'lucide-react'
+import { User, Pencil, RefreshCw, Check, X } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { References } from './References'
 import { RichResponse } from './RichResponse'
 import { AiAvatar } from '@/components/shared/AiAvatar'
 import { parseReferences } from '@/lib/utils/references'
 import { parseRichResponse } from '@/lib/utils/rich-response'
+import { useChatStore } from '@/store/chat-store'
+import { useChat } from '@/lib/hooks/useChat'
 import type { Message } from '@/types'
 import { useMemo } from 'react'
 
@@ -19,6 +22,11 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, isStreaming, streamingContent }: MessageBubbleProps) {
   const isUser = message.role === 'user'
+  const [editing, setEditing] = useState(false)
+  const [editContent, setEditContent] = useState('')
+  const replaceMessagesAfter = useChatStore((s) => s.replaceMessagesAfter)
+  const { editAndResend, regenerateResponse } = useChat()
+
   const rawContent = isStreaming ? streamingContent || '' : message.content
 
   const { cleanContent, references, richResponse } = useMemo(() => {
@@ -33,8 +41,42 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
     return { cleanContent: cc, references: refs, richResponse: null }
   }, [rawContent, isUser, isStreaming])
 
+  const handleStartEdit = useCallback(() => {
+    setEditContent(message.content)
+    setEditing(true)
+  }, [message.content])
+
+  const handleCancelEdit = useCallback(() => {
+    setEditing(false)
+    setEditContent('')
+  }, [])
+
+  const handleSaveEdit = useCallback(() => {
+    const trimmed = editContent.trim()
+    if (!trimmed || trimmed === message.content) {
+      setEditing(false)
+      return
+    }
+    setEditing(false)
+    editAndResend(message, trimmed)
+  }, [editContent, message, editAndResend])
+
+  const handleRegenerate = useCallback(() => {
+    regenerateResponse(message)
+  }, [message, regenerateResponse])
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSaveEdit()
+    }
+    if (e.key === 'Escape') {
+      handleCancelEdit()
+    }
+  }
+
   return (
-    <div className={cn('flex gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3', isUser ? 'justify-end' : 'justify-start')}>
+    <div className={cn('group flex gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3', isUser ? 'justify-end' : 'justify-start')}>
       {!isUser && (
         <div className="flex-shrink-0 mt-0.5">
           <AiAvatar size={32} />
@@ -43,20 +85,48 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
 
       <div className={cn(
         'min-w-0',
-        isUser ? 'order-1' : 'order-1',
         isUser ? 'max-w-[85%] sm:max-w-[75%]' : 'max-w-[88%] sm:max-w-[75%]'
       )}>
         <div
           className={cn(
             'rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5',
             isUser
-              ? 'bg-blue-600 text-white rounded-br-sm'
+              ? editing
+                ? 'bg-white dark:bg-gray-900 border-2 border-blue-500 shadow-sm'
+                : 'bg-blue-600 text-white rounded-br-sm'
               : richResponse
                 ? 'bg-white dark:bg-gray-900 rounded-bl-sm shadow-sm border border-gray-200 dark:border-gray-800'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-sm'
           )}
         >
-          {isUser ? (
+          {isUser && editing ? (
+            <div className="space-y-2">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+                autoFocus
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={handleCancelEdit}
+                  className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  title="Cancel"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  title="Save & Resend"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : isUser ? (
             <p className="text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">{cleanContent}</p>
           ) : (
             <div className={richResponse ? '' : 'text-sm sm:text-base leading-relaxed'}>
@@ -74,6 +144,33 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
             </div>
           )}
         </div>
+
+        {/* Edit / Re-gen buttons (only for non-streaming messages) */}
+        {!isStreaming && (
+          <div className={cn(
+            'flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity',
+            isUser ? 'justify-end' : 'justify-start'
+          )}>
+            {isUser && (
+              <button
+                onClick={handleStartEdit}
+                className="p-1 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                title="Edit message"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {!isUser && (
+              <button
+                onClick={handleRegenerate}
+                className="p-1 rounded-md text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                title="Regenerate response"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {isUser && (
