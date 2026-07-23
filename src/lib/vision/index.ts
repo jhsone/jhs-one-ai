@@ -21,8 +21,9 @@ class VisionEngine {
   }> {
     const visionProviders = getVisionCapableProviders()
     const allowed = activeProviders ?? visionProviders
+    const visionAllowed = allowed.filter(p => visionProviders.includes(p))
 
-    const initialProvider = selectVisionProvider(allowed)
+    const initialProvider = selectVisionProvider(visionAllowed)
     if (!initialProvider) {
       throw new Error('No vision-capable AI providers available')
     }
@@ -31,7 +32,7 @@ class VisionEngine {
     let fallbackProvider: ProviderName | null = null
     let retryCount = 0
 
-    for (const provider of [initialProvider, ...allowed.filter(p => p !== initialProvider && p !== initialProvider)]) {
+    for (const provider of [initialProvider, ...visionAllowed.filter(p => p !== initialProvider)]) {
       if (!provider) continue
 
       for (let attempt = 0; attempt < 3; attempt++) {
