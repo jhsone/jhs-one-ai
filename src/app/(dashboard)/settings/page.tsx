@@ -192,7 +192,22 @@ export default function SettingsPage() {
         {
           icon: Download,
           label: t('settings.export_chats'),
-          action: <span className="text-xs text-gray-500 dark:text-gray-400">{t('profile.coming_soon')}</span>,
+          action: (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.open('/api/conversations/export?format=json', '_blank')}
+                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline px-2 py-1 bg-blue-50 dark:bg-blue-950/40 rounded"
+              >
+                JSON
+              </button>
+              <button
+                onClick={() => window.open('/api/conversations/export?format=markdown', '_blank')}
+                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline px-2 py-1 bg-blue-50 dark:bg-blue-950/40 rounded"
+              >
+                Markdown
+              </button>
+            </div>
+          ),
         },
         {
           icon: Trash2,
