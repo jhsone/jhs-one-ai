@@ -93,26 +93,27 @@ export async function POST(req: NextRequest) {
           visionAttachments.push(docAtt)
 
           const ocrResult = await documentEngine.processAttachment(docAtt)
-          if (ocrResult.success && ocrResult.fullText) {
-            documentResults.push(ocrResult)
-            allDocAttachments.push(docAtt)
+          const ocrText = ocrResult.success && ocrResult.fullText ? ocrResult.fullText : '[Image uploaded for visual analysis]'
+          const pageCount = ocrResult.success && ocrResult.fullText ? ocrResult.pagesProcessed : 0
 
+          documentResults.push({
+            success: true,
+            documentType: 'image',
+            pages: [{ pageNumber: 1, text: ocrText }],
+            fullText: ocrText,
+            textLength: ocrText.length,
+            pagesProcessed: pageCount,
+            ocrUsed: ocrResult.success,
+            parserUsed: ocrResult.success ? ocrResult.parserUsed : 'vision-only',
+            language: ocrResult.language,
+          })
+          allDocAttachments.push(docAtt)
+
+          if (ocrResult.success && ocrResult.fullText) {
             try { await supabase
               .from('attachments')
               .update({ context_text: ocrResult.fullText, page_count: ocrResult.pagesProcessed })
               .eq('id', a.id) } catch {}
-          } else {
-            // Still track the image for vision even if OCR fails
-            documentResults.push({
-              success: true,
-              documentType: 'image',
-              pages: [],
-              fullText: `[Image: ${docAtt.fileName}]`,
-              textLength: 0,
-              pagesProcessed: 0,
-              ocrUsed: false,
-              parserUsed: 'vision-only',
-            })
           }
 
           try { await supabase.from('document_logs').insert({
@@ -175,19 +176,18 @@ export async function POST(req: NextRequest) {
         } else if (isImageType(docType)) {
           visionAttachments.push(docAtt)
 
-          if (a.context_text) {
-            documentResults.push({
-              success: true,
-              documentType: 'image',
-              pages: [{ pageNumber: 1, text: a.context_text }],
-              fullText: a.context_text,
-              textLength: a.context_text.length,
-              pagesProcessed: 1,
-              ocrUsed: true,
-              parserUsed: 'cached-ocr',
-            })
-            allDocAttachments.push(docAtt)
-          }
+          const ctxText = a.context_text || '[Image uploaded for visual analysis]'
+          documentResults.push({
+            success: true,
+            documentType: 'image',
+            pages: [{ pageNumber: 1, text: ctxText }],
+            fullText: ctxText,
+            textLength: ctxText.length,
+            pagesProcessed: 1,
+            ocrUsed: !!a.context_text,
+            parserUsed: a.context_text ? 'cached-ocr' : 'vision-only',
+          })
+          allDocAttachments.push(docAtt)
         } else {
           if (a.context_text) {
             documentResults.push({
