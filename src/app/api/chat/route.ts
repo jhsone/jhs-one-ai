@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { routeAIRequest } from '@/lib/ai/router'
-import { documentEngine } from '@/lib/document'
-import { detectDocumentType, isImageType } from '@/lib/document'
+import { documentEngine, detectDocumentType, isImageType } from '@/lib/document'
+import { transcribeAudio } from '@/lib/ocr/audio-transcription'
 import { rateLimitMiddleware } from '@/lib/rate-limit'
 import { searchWeb, formatWebResultsForContext } from '@/lib/web-search'
 import type { ChatRequest, ProviderName } from '@/types'
@@ -24,8 +24,6 @@ export async function POST(req: NextRequest) {
     const body: ChatRequest = await req.json()
     const { message, conversation_id, attachment_ids, web_search } = body
 
-    console.log('[chat] message:', message.slice(0, 100), 'conv:', conversation_id, 'att_ids:', attachment_ids, 'web_search:', web_search)
-
     if (!message || !conversation_id) {
       return new Response(JSON.stringify({ error: 'Message and conversation_id required' }), { status: 400 })
     }
@@ -44,8 +42,9 @@ export async function POST(req: NextRequest) {
     const history = body.history || []
 
     let routeOptions: Parameters<typeof routeAIRequest>[3] = {}
+    let attachmentContext = ''
 
-    // --- Fetch ALL attachments for this conversation (persistence fix) ---
+    // --- Fetch ALL attachments for this conversation ---
     const { data: convAttachments } = await supabase
       .from('attachments')
       .select('*')
@@ -54,7 +53,6 @@ export async function POST(req: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (convAttachments && convAttachments.length > 0) {
-      console.log('[chat] conv attachments:', convAttachments.length, 'new:', attachment_ids?.length ?? 0)
       const newIds = new Set(attachment_ids ?? [])
       const newRecords = convAttachments.filter(a => newIds.has(a.id))
       const existingRecords = convAttachments.filter(a => !newIds.has(a.id))
@@ -62,8 +60,9 @@ export async function POST(req: NextRequest) {
       const allDocAttachments: DocumentAttachment[] = []
       const documentResults: ParserResult[] = []
       const visionAttachments: VisionAttachment[] = []
+      const audioContexts: string[] = []
 
-      // --- Process NEW attachments (extract text, save to DB) ---
+      // --- Process NEW attachments ---
       for (const a of newRecords) {
         const docAtt: DocumentAttachment = {
           id: a.id,
@@ -79,19 +78,41 @@ export async function POST(req: NextRequest) {
 
         const docType = detectDocumentType(docAtt.mimeType, docAtt.fileName)
 
-        if (isImageType(docType)) {
-          // Images go to vision engine
-          visionAttachments.push(docAtt)
-          // Also OCR the image for text context (so follow-up text questions work)
-          const ocrResult = await documentEngine.processAttachment(docAtt)
-          documentResults.push(ocrResult)
-          allDocAttachments.push(docAtt)
+        if (docAtt.mimeType.startsWith('audio/')) {
+          // Transcribe audio and add to context
+          const transcription = await transcribeAudio(docAtt.cloudinaryUrl)
+          if (transcription) {
+            audioContexts.push(`[Audio Transcription: ${docAtt.fileName}]\n${transcription}`)
 
+            try { await supabase
+              .from('attachments')
+              .update({ context_text: transcription })
+              .eq('id', a.id) } catch {}
+          }
+        } else if (isImageType(docType)) {
+          visionAttachments.push(docAtt)
+
+          const ocrResult = await documentEngine.processAttachment(docAtt)
           if (ocrResult.success && ocrResult.fullText) {
+            documentResults.push(ocrResult)
+            allDocAttachments.push(docAtt)
+
             try { await supabase
               .from('attachments')
               .update({ context_text: ocrResult.fullText, page_count: ocrResult.pagesProcessed })
               .eq('id', a.id) } catch {}
+          } else {
+            // Still track the image for vision even if OCR fails
+            documentResults.push({
+              success: true,
+              documentType: 'image',
+              pages: [],
+              fullText: `[Image: ${docAtt.fileName}]`,
+              textLength: 0,
+              pagesProcessed: 0,
+              ocrUsed: false,
+              parserUsed: 'vision-only',
+            })
           }
 
           try { await supabase.from('document_logs').insert({
@@ -107,7 +128,6 @@ export async function POST(req: NextRequest) {
             error_message: ocrResult.error,
           }) } catch {}
         } else {
-          // Documents (PDF/DOCX/TXT/MD) — extract text
           const result = await documentEngine.processAttachment(docAtt)
           documentResults.push(result)
           allDocAttachments.push(docAtt)
@@ -150,11 +170,11 @@ export async function POST(req: NextRequest) {
 
         const docType = detectDocumentType(docAtt.mimeType, docAtt.fileName)
 
-        if (isImageType(docType)) {
-          // Add to vision attachments for potential visual processing
+        if (a.mime_type.startsWith('audio/') && a.context_text) {
+          audioContexts.push(`[Audio Transcription: ${docAtt.fileName}]\n${a.context_text}`)
+        } else if (isImageType(docType)) {
           visionAttachments.push(docAtt)
 
-          // Use saved OCR text if available
           if (a.context_text) {
             documentResults.push({
               success: true,
@@ -169,7 +189,6 @@ export async function POST(req: NextRequest) {
             allDocAttachments.push(docAtt)
           }
         } else {
-          // Use saved document text if available
           if (a.context_text) {
             documentResults.push({
               success: true,
@@ -186,17 +205,16 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Build audio transcription context
+      if (audioContexts.length > 0) {
+        attachmentContext += '\n\n' + audioContexts.join('\n\n---\n\n')
+      }
+
       // --- Decide routing ---
       const hasDocumentContext = documentResults.some(r => r.success && r.fullText)
       const hasImages = visionAttachments.length > 0
 
-      console.log('[chat] docContext:', hasDocumentContext, 'images:', hasImages, 'results:', documentResults.length)
-      for (const r of documentResults) {
-        console.log('[chat] result:', r.documentType, r.parserUsed, 'len:', r.textLength, 'success:', r.success, r.error ?? '')
-      }
-
       if (hasDocumentContext && hasImages) {
-        // Both: use document engine for text context, also pass images to vision
         routeOptions = {
           documentAttachments: allDocAttachments,
           documentResults,
@@ -204,14 +222,12 @@ export async function POST(req: NextRequest) {
           useVision: true,
         }
       } else if (hasDocumentContext) {
-        // Documents only: use any provider with extracted text
         routeOptions = {
           documentAttachments: allDocAttachments,
           documentResults,
           useVision: false,
         }
       } else if (hasImages) {
-        // Images only: use vision engine
         routeOptions = {
           attachments: visionAttachments,
           useVision: true,
@@ -225,22 +241,20 @@ export async function POST(req: NextRequest) {
       try {
         const searchResponse = await searchWeb(message, 5)
         webContext = formatWebResultsForContext(searchResponse)
-        console.log('[chat] web search:', searchResponse.results.length, 'results')
       } catch (err: any) {
         console.warn('[chat] web search failed:', err.message)
       }
     }
 
-    console.log('[chat] routeOptions:', JSON.stringify({
-      hasDocs: !!routeOptions.documentAttachments,
-      hasVision: !!routeOptions.attachments,
-      useVision: routeOptions.useVision,
-      webSearch: !!webContext,
-    }))
-
-    let augmentedMessage = message
+    // Build augmented message with all context
+    let augmentedMessage = message.trim()
+    if (attachmentContext) {
+      augmentedMessage += attachmentContext
+    }
     if (webContext) {
-      augmentedMessage = `${webContext}\n\n---\n\nUser Question: ${message}\n\nUse the web search results above to answer the question. If the results don't contain enough information, say so clearly. Always cite sources using the <references> format.`
+      augmentedMessage = augmentedMessage
+        ? `${webContext}\n\n---\n\nUser Question: ${augmentedMessage}\n\nUse the web search results above to answer the question. If the results don't contain enough information, say so clearly. Always cite sources using the <references> format.`
+        : `${webContext}\n\n---\n\nUser Question: ${message}\n\nUse the web search results above to answer the question. If the results don't contain enough information, say so clearly. Always cite sources using the <references> format.`
     }
 
     const {
@@ -258,9 +272,7 @@ export async function POST(req: NextRequest) {
       textLength,
       ocrUsed,
       parserUsed,
-    } = await routeAIRequest(augmentedMessage, history, activeProviders, routeOptions)
-
-    console.log('[chat] routed to:', usedProvider, 'model:', usedModel, 'vision:', visionEnabled, 'doc:', documentEnabled)
+    } = await routeAIRequest(augmentedMessage || message, history, activeProviders, routeOptions)
 
     const startTime = Date.now()
 

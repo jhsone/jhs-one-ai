@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Search, ChevronRight, MessageSquare, Archive, RotateCcw } from 'lucide-react'
+import { Plus, Search, ChevronRight, MessageSquare, Archive, RotateCcw, LogOut } from 'lucide-react'
 import { t } from '@/lib/i18n'
 import { SidebarItem } from './SidebarItem'
 import { AiAvatar } from '@/components/shared/AiAvatar'
@@ -9,12 +9,14 @@ import { useChat } from '@/lib/hooks/useChat'
 import { useAuth } from '@/components/shared/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useRouter } from 'next/navigation'
 import type { Message } from '@/types'
 
 export function Sidebar() {
   const [search, setSearch] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [messageResults, setMessageResults] = useState<{ convId: string; title: string; snippet: string }[]>([])
   const [searching, setSearching] = useState(false)
   const router = useRouter()
@@ -85,6 +87,7 @@ export function Sidebar() {
     updateConversation(id, { title })
   }
   const handleSignOut = async () => {
+    setShowLogoutConfirm(false)
     const supabase = createClient()
     await supabase.auth.signOut()
     router.refresh()
@@ -290,8 +293,26 @@ export function Sidebar() {
             </div>
             <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
           </button>
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="flex items-center gap-2.5 w-full px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors text-gray-500 hover:text-red-600 dark:hover:text-red-400"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="text-sm">{t('profile.logout')}</span>
+          </button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title={t('profile.logout')}
+        message="Are you sure you want to sign out? You can always sign back in."
+        confirmLabel={t('profile.logout')}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleSignOut}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   )
 }
