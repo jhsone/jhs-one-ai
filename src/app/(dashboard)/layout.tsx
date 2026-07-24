@@ -6,7 +6,6 @@ import { Sidebar } from '@/components/sidebar/Sidebar'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { LanguageSelector } from '@/components/shared/LanguageSelector'
 import { AiAvatar } from '@/components/shared/AiAvatar'
-import { MobileNav } from '@/components/navigation/MobileNav'
 import { Menu } from 'lucide-react'
 import { useAppStore } from '@/store/app-store'
 import { useAuth } from '@/components/shared/AuthProvider'
@@ -79,13 +78,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Chat content */}
-        <main className="flex-1 flex flex-col min-h-0 overflow-hidden pb-14 md:pb-0">
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {children}
         </main>
       </div>
-
-      {/* Mobile bottom nav */}
-      <MobileNav />
     </div>
   )
 }
