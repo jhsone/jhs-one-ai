@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const setSidebarOpen = useAppStore((s) => s.setSidebarOpen)
 
   useEffect(() => {
-    if (!isLoading && !session) router.push('/login')
+    if (!isLoading && !session) router.push('/')
   }, [isLoading, session, router])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [setSidebarOpen])
