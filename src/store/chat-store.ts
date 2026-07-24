@@ -16,6 +16,18 @@ interface PendingAttachment {
   result?: Attachment
 }
 
+export interface MessageAttachment {
+  id: string
+  cloudinaryUrl: string
+  thumbnailUrl: string | null
+  fileName: string
+  fileType: string
+  mimeType: string
+  messageId: number | null
+  width: number | null
+  height: number | null
+}
+
 interface ChatState {
   conversations: Conversation[]
   currentConversationId: string | null
@@ -24,6 +36,7 @@ interface ChatState {
   streamingContent: string
   error: string | null
   pendingAttachments: PendingAttachment[]
+  conversationAttachments: MessageAttachment[]
   setConversations: (conversations: Conversation[]) => void
   setCurrentConversation: (id: string | null) => void
   setMessages: (messages: Message[]) => void
@@ -42,6 +55,7 @@ interface ChatState {
   updatePendingAttachment: (id: string, updates: Partial<PendingAttachment>) => void
   removePendingAttachment: (id: string) => void
   clearPendingAttachments: () => void
+  setConversationAttachments: (atts: MessageAttachment[]) => void
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -52,6 +66,7 @@ export const useChatStore = create<ChatState>((set) => ({
   streamingContent: '',
   error: null,
   pendingAttachments: [],
+  conversationAttachments: [],
 
   setConversations: (conversations) => set({ conversations }),
   setCurrentConversation: (id) => set({ currentConversationId: id }),
@@ -90,6 +105,7 @@ export const useChatStore = create<ChatState>((set) => ({
       streamingContent: '',
       error: null,
       pendingAttachments: [],
+      conversationAttachments: [],
     }),
 
   addPendingAttachment: (att) => set((s) => ({ pendingAttachments: [...s.pendingAttachments, att] })),
@@ -104,4 +120,5 @@ export const useChatStore = create<ChatState>((set) => ({
       pendingAttachments: s.pendingAttachments.filter((a) => a.id !== id),
     })),
   clearPendingAttachments: () => set({ pendingAttachments: [] }),
+  setConversationAttachments: (atts) => set({ conversationAttachments: atts }),
 }))

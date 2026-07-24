@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Square, Paperclip, Camera, Image, File as FileIcon, X, Mic, MicOff, Globe, Radio } from 'lucide-react'
+import { Send, Paperclip, Camera, Globe, Radio, X } from 'lucide-react'
 import { useChatStore } from '@/store/chat-store'
 import { useChat } from '@/lib/hooks/useChat'
-import { useVoice } from '@/lib/hooks/useVoice'
 import { FileProcessor } from '@/lib/upload/file-processor'
 import { ACCEPTED_MIME_TYPES } from '@/lib/upload/types'
 import { AttachmentPreview } from './AttachmentPreview'
@@ -25,7 +24,6 @@ export function ChatInput() {
   const clearPendingAttachments = useChatStore((s) => s.clearPendingAttachments)
   const currentConversationId = useChatStore((s) => s.currentConversationId)
   const { sendMessage, stopStreaming, createConversation } = useChat()
-  const { isListening, transcript, startListening, stopListening, isSupported: voiceSupported } = useVoice()
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -33,103 +31,6 @@ export function ChatInput() {
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px'
     }
   }, [input])
-
-  // Revoke blob URLs on unmount
-  useEffect(() => {
-    return () => {
-      pendingAttachments.forEach(a => {
-        if (a.previewUrl) FileProcessor.revokePreviewUrl(a.previewUrl)
-      })
-    }
-  }, [])
-
-  // Voice transcript -> input
-  useEffect(() => {
-    if (transcript) {
-      setInput(prev => prev ? prev + ' ' + transcript : transcript)
-    }
-  }, [transcript])
-
-  const [isRecording, setIsRecording] = useState(false)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-
-  const getAudioMimeType = () => {
-    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus'
-    if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm'
-    if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4'
-    if (MediaRecorder.isTypeSupported('audio/aac')) return 'audio/aac'
-    if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) return 'audio/ogg;codecs=opus'
-    return 'audio/webm'
-  }
-
-  const getFileExtension = (mime: string) => {
-    if (mime.includes('mp4')) return 'mp4'
-    if (mime.includes('aac')) return 'aac'
-    if (mime.includes('ogg')) return 'ogg'
-    return 'webm'
-  }
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mimeType = getAudioMimeType()
-      const mediaRecorder = new MediaRecorder(stream, { mimeType })
-      mediaRecorderRef.current = mediaRecorder
-      audioChunksRef.current = []
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data)
-      }
-
-      mediaRecorder.onstop = async () => {
-        const mime = getAudioMimeType().split(';')[0]
-        const ext = getFileExtension(mime)
-        const blob = new Blob(audioChunksRef.current, { type: mime })
-        const file = new File([blob], `recording-${Date.now()}.${ext}`, { type: mime })
-
-        let convId = currentConversationId
-        if (!convId) {
-          convId = await createConversation()
-          if (!convId) return
-        }
-
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('conversation_id', convId)
-
-        try {
-          const res = await fetch('/api/upload', { method: 'POST', body: formData })
-          if (res.ok) {
-            const data = await res.json()
-            addPendingAttachment({
-              id: `audio-${Date.now()}`,
-              file,
-              previewUrl: '',
-              fileType: 'audio',
-              fileName: file.name,
-              fileSize: file.size,
-              progress: 100,
-              status: 'done',
-              result: data.attachment,
-            })
-          }
-        } catch {}
-
-        stream.getTracks().forEach(t => t.stop())
-      }
-
-      mediaRecorder.start()
-      setIsRecording(true)
-    } catch {}
-  }
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop()
-    }
-    setIsRecording(false)
-  }
 
   const handleAttachFiles = async (files: FileList | null) => {
     if (!files) return
@@ -247,162 +148,110 @@ export function ChatInput() {
         {pendingAttachments.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2">
             {pendingAttachments.map((att) => (
-              <div key={att.id} className="w-full sm:w-auto min-w-0 sm:min-w-[200px] max-w-full">
-                <AttachmentPreview
-                  id={att.id}
-                  fileName={att.fileName}
-                  fileType={att.fileType}
-                  previewUrl={att.previewUrl}
-                  fileSize={att.fileSize}
-                  progress={att.progress}
-                  status={att.status}
-                  error={att.error}
-                  result={att.result}
-                  onRemove={removeAttachment}
-                />
-              </div>
+              <AttachmentPreview
+                key={att.id}
+                id={att.id}
+                fileName={att.fileName}
+                fileType={att.fileType}
+                previewUrl={att.previewUrl || ''}
+                fileSize={att.fileSize}
+                progress={att.progress}
+                status={att.status}
+                error={att.error}
+                result={att.result}
+                onRemove={removeAttachment}
+              />
             ))}
           </div>
         )}
 
-        <div className="flex items-end gap-2 bg-gray-100 dark:bg-gray-900 rounded-2xl px-3 sm:px-4 py-2 border border-gray-200 dark:border-gray-800 focus-within:border-blue-500 dark:focus-within:border-blue-400 transition-colors">
+        <div className="flex items-end gap-2 bg-gray-50 dark:bg-gray-900 rounded-lg p-2 shadow-sm border border-gray-200 dark:border-gray-700">
           {/* Attachment button */}
-          <div className="relative">
-            <button
-              onClick={() => setShowAttach(!showAttach)}
-              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              aria-label="Attach file"
-              disabled={isStreaming}
-            >
-              <Paperclip className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            </button>
-
-            {/* Bottom sheet (mobile) / Popover (desktop) */}
-            {showAttach && (
-              <>
-                <div className="fixed inset-0 z-40 sm:fixed" onClick={() => setShowAttach(false)} />
-                <div className="absolute bottom-full mb-2 left-0 z-50 sm:left-0 sm:bottom-full sm:mb-2">
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden min-w-[180px]">
-                    <button
-                      onClick={() => { cameraInputRef.current?.click() }}
-                      className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <Camera className="h-4 w-4" />
-                      <span>Camera</span>
-                    </button>
-                    <button
-                      onClick={() => { fileInputRef.current?.click() }}
-                      className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <Image className="h-4 w-4" />
-                      <span>Gallery</span>
-                    </button>
-                    <button
-                      onClick={() => { fileInputRef.current?.click() }}
-                      className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <FileIcon className="h-4 w-4" />
-                      <span>Files</span>
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Hidden file inputs */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => handleAttachFiles(e.target.files)}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPTED_MIME_TYPES.join(',')}
-              multiple
-              className="hidden"
-              onChange={(e) => handleAttachFiles(e.target.files)}
-            />
-          </div>
-
-          {/* Web Search toggle */}
           <button
-            onClick={() => setWebSearch(!webSearch)}
-            className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-              webSearch
-                ? 'bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400'
-                : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
-            }`}
-            aria-label="Search web"
-            disabled={isStreaming}
-            title={webSearch ? 'Web search on' : 'Web search off'}
+            type="button"
+            onClick={() => setShowAttach(true)}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+            aria-label="Attach file"
           >
-            <Globe className="h-4 w-4" />
+            <Paperclip className="h-5 w-5" />
           </button>
 
-          {/* Voice input button */}
-          {voiceSupported && (
-            <button
-              onClick={isListening ? stopListening : startListening}
-              className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                isListening
-                  ? 'bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 animate-pulse'
-                  : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
-              }`}
-              aria-label={isListening ? 'Stop recording' : 'Voice input'}
-              disabled={isStreaming}
-            >
-              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </button>
-          )}
-
-          {/* Audio record button */}
+          {/* Camera button (for images) */}
           <button
-            onClick={isRecording ? stopRecording : startRecording}
-            className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-              isRecording
-                ? 'bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 animate-pulse'
-                : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
-            }`}
-            aria-label={isRecording ? 'Stop audio recording' : 'Record audio'}
-            disabled={isStreaming}
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+            aria-label="Take photo"
           >
-            {isRecording ? <Radio className="h-4 w-4" /> : <Radio className="h-4 w-4" />}
+            <Camera className="h-5 w-5" />
           </button>
 
+          {/* Hidden file inputs */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={Object.keys(ACCEPTED_MIME_TYPES).join(',')}
+            className="hidden"
+            onChange={(e) => handleAttachFiles(e.target.files)}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => handleAttachFiles(e.target.files)}
+          />
+
+          {/* Text area */}
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={t('chat.placeholder')}
+            placeholder={t('chatInput.placeholder')}
+            className="flex-1 min-h-[40px] max-h-[120px] px-3 py-2 bg-transparent border-none resize-none focus:ring-0 focus:outline-none text-sm sm:text-base"
             rows={1}
-            className="flex-1 bg-transparent resize-none outline-none text-sm sm:text-base text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 py-1.5 max-h-[120px] leading-5"
-            disabled={isStreaming}
+            disabled={isStreaming || anyUploading}
           />
-          {isStreaming ? (
+
+          {/* Web search */}
+          {webSearch && (
+            <Globe className="h-4 w-4 text-blue-500" />
+          )}
+
+          {/* Send button */}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!input.trim() && pendingAttachments.length === 0 || isStreaming || anyUploading}
+            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Send className="h-5 w-5" />
+          </button>
+
+          {/* Stop streaming */}
+          {isStreaming && stopStreaming && (
             <button
+              type="button"
               onClick={stopStreaming}
-              className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
-              <Square className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-gray-600 dark:text-gray-300" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={!input.trim() && pendingAttachments.length === 0}
-              className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-            >
-              <Send className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-white" />
+              <X className="h-5 w-5" />
             </button>
           )}
+
+          {/* Radio for web search (if available) */}
+          <button
+            type="button"
+            onClick={() => setWebSearch(!webSearch)}
+            className={`p-2 rounded-lg transition-colors ${webSearch ? 'text-blue-500' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
+            aria-label="Toggle web search"
+          >
+            <Radio className="h-5 w-5" />
+          </button>
         </div>
-        <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-1.5">
-          {t('chat.disclaimer')}
-        </p>
       </div>
     </div>
   )

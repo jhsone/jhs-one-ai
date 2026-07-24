@@ -210,6 +210,33 @@ export async function POST(req: NextRequest) {
         attachmentContext += '\n\n' + audioContexts.join('\n\n---\n\n')
       }
 
+      // Get fresh message ID from the just-inserted user message
+      const { data: allMessages } = await supabase
+        .from('messages')
+        .select('id, created_at')
+        .eq('conversation_id', conversation_id)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const latestUserMessage = allMessages && allMessages.length > 0 ? allMessages[0] : null
+      console.log('[chat] Retrieved latest user message for linking attachments:', latestUserMessage)
+
+      // Link vision attachments to the user message
+      if (latestUserMessage && visionAttachments.length > 0) {
+        const attachmentIds = visionAttachments.map(a => a.id)
+        const { error: linkError } = await supabase
+          .from('attachments')
+          .update({ message_id: latestUserMessage.id })
+          .in('id', attachmentIds)
+        
+        if (linkError) {
+          console.error('[chat] Failed to link attachments to message:', linkError.message)
+        } else {
+          console.log('[chat] Successfully linked', attachmentIds.length, 'attachments to message', latestUserMessage.id)
+        }
+      }
+
       // --- Decide routing ---
       const hasDocumentContext = documentResults.some(r => r.success && r.fullText)
       const hasImages = visionAttachments.length > 0
@@ -327,30 +354,41 @@ export async function POST(req: NextRequest) {
           controller.close()
         } catch (err) {
           const responseTime = Date.now() - startTime
-
-          await supabase.from('provider_logs').insert({
+          const errorMessage = (err as Error).message || 'Unknown error'
+          console.error('[API Chat Route Stream Error] Stream failed:', {
+            error: errorMessage,
+            stack: (err as Error).stack,
             provider: usedProvider,
             model: usedModel,
-            status: 'failed',
-            response_time: responseTime,
-            user_id: user.id,
-            error_message: (err as Error).message,
-            api_key_index: usedKeyIndex,
-            fallback_provider: fallbackProvider,
-            retry_count: retryCount,
-            health_score: healthScore,
-            vision_enabled: visionEnabled,
-            document_enabled: documentEnabled,
-            attachment_count: attachmentCount,
-            pages_processed: pagesProcessed,
-            text_length: textLength,
-            ocr_used: ocrUsed,
-            parser_used: parserUsed,
           })
+
+          try {
+            await supabase.from('provider_logs').insert({
+              provider: usedProvider,
+              model: usedModel,
+              status: 'failed',
+              response_time: responseTime,
+              user_id: user.id,
+              error_message: errorMessage,
+              api_key_index: usedKeyIndex,
+              fallback_provider: fallbackProvider,
+              retry_count: retryCount,
+              health_score: healthScore,
+              vision_enabled: visionEnabled,
+              document_enabled: documentEnabled,
+              attachment_count: attachmentCount,
+              pages_processed: pagesProcessed,
+              text_length: textLength,
+              ocr_used: ocrUsed,
+              parser_used: parserUsed,
+            })
+          } catch (dbErr: any) {
+            console.error('[API Chat Route DB Log Error] Failed to write failure log to provider_logs:', dbErr.message)
+          }
 
           const encoder = new TextEncoder()
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: 'error', content: 'Failed to get response from AI' })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ type: 'error', content: `AI Response Error: ${errorMessage}` })}\n\n`)
           )
           controller.close()
         }
@@ -364,9 +402,13 @@ export async function POST(req: NextRequest) {
         Connection: 'keep-alive',
       },
     })
-  } catch (err) {
+  } catch (err: any) {
+    console.error('[API Chat Route Critical Error] Failed in outer execution handler:', {
+      error: err.message,
+      stack: err.stack,
+    })
     return new Response(
-      JSON.stringify({ type: 'error', content: (err as Error).message || 'Something went wrong' }),
+      JSON.stringify({ type: 'error', content: err.message || 'Something went wrong' }),
       { status: 500 }
     )
   }

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { cn } from '@/lib/utils/cn'
-import { User, Pencil, RefreshCw, Check, X, Volume2, VolumeX, GitBranch } from 'lucide-react'
+import { User, Pencil, RefreshCw, Check, X, GitBranch, Image as ImageIcon } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { References } from './References'
 import { RichResponse } from './RichResponse'
@@ -10,9 +10,8 @@ import { AiAvatar } from '@/components/shared/AiAvatar'
 import { parseReferences } from '@/lib/utils/references'
 import { parseRichResponse } from '@/lib/utils/rich-response'
 import { useChat } from '@/lib/hooks/useChat'
-import { useVoice } from '@/lib/hooks/useVoice'
+import { useChatStore } from '@/store/chat-store'
 import type { Message } from '@/types'
-import { useMemo } from 'react'
 
 interface MessageBubbleProps {
   message: Message
@@ -25,7 +24,26 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState('')
   const { editAndResend, regenerateResponse, forkConversation } = useChat()
-  const { isSpeaking, speak, stopSpeaking } = useVoice()
+  const conversationAttachments = useChatStore((s) => s.conversationAttachments)
+
+  const imageAttachments = useMemo(() => {
+    if (!isUser) return []
+    
+    console.log('MessageBubble debug:', {
+      userMsgId: message.id,
+      userMsgContent: message.content.substring(0, 50) + '...',
+      conversationAttachmentsCount: conversationAttachments.length,
+      conversationAttachmentIds: conversationAttachments.map(a => ({ id: a.id, messageId: a.messageId })),
+    })
+    
+    return conversationAttachments.filter(att => att.fileType === 'image' || att.mimeType.startsWith('image/'))
+  }, [isUser, message.id, conversationAttachments])
+
+  console.log('MessageBubble render - image attachments for message:', message.id, {
+    isUser,
+    imageCount: imageAttachments.length,
+    images: imageAttachments.map(a => ({ id: a.id, cloudinaryUrl: a.cloudinaryUrl, messageId: a.messageId, fileName: a.fileName }))
+  })
 
   const rawContent = isStreaming ? streamingContent || '' : message.content
 
@@ -68,14 +86,6 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
   const handleFork = useCallback(() => {
     forkConversation(message.id)
   }, [message.id, forkConversation])
-
-  const toggleSpeak = useCallback(() => {
-    if (isSpeaking) {
-      stopSpeaking()
-    } else {
-      speak(cleanContent)
-    }
-  }, [isSpeaking, speak, stopSpeaking, cleanContent])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -139,7 +149,29 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
               </div>
             </div>
           ) : isUser ? (
-            <p className="text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">{cleanContent}</p>
+            <>
+              {imageAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {imageAttachments.map((att) => (
+                    <a
+                      key={att.id}
+                      href={att.cloudinaryUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-32 h-32 sm:w-40 sm:h-40 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 hover:opacity-90 transition-opacity bg-gray-100 dark:bg-gray-800"
+                    >
+                      <img
+                        src={att.thumbnailUrl || att.cloudinaryUrl}
+                        alt={att.fileName}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">{cleanContent}</p>
+            </>
           ) : (
             <div className={richResponse ? '' : 'text-sm sm:text-base leading-relaxed'}>
               {richResponse ? (
@@ -174,13 +206,6 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
             )}
             {!isUser && (
               <>
-                <button
-                  onClick={toggleSpeak}
-                  className="p-1 rounded-md text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
-                  title={isSpeaking ? 'Stop speaking' : 'Read aloud'}
-                >
-                  {isSpeaking ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-                </button>
                 <button
                   onClick={handleRegenerate}
                   className="p-1 rounded-md text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
