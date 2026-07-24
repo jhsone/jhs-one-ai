@@ -45,9 +45,9 @@ CREATE POLICY "Users can insert own document logs"
 CREATE POLICY "Admins can view all document logs"
   ON document_logs FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM app_settings
+    auth.email() IN (
+      SELECT jsonb_array_elements_text(value)
+      FROM app_settings
       WHERE key = 'admin_emails'
-      AND value @> to_jsonb(auth.jwt() ->> 'email')
     )
   );
