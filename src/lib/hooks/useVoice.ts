@@ -29,6 +29,9 @@ export function useVoice(): UseVoiceReturn {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       speechSynthRef.current = window.speechSynthesis
+      if (speechSynthRef.current.getVoices().length === 0) {
+        speechSynthRef.current.addEventListener('voiceschanged', () => {}, { once: true })
+      }
     }
     return () => {
       stopListening()
@@ -57,16 +60,18 @@ export function useVoice(): UseVoiceReturn {
     recognition.lang = 'bn-BD'
 
     recognition.onresult = (event: any) => {
+      let interimText = ''
       let finalText = ''
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i]
         if (result.isFinal) {
           finalText += result[0].transcript
+        } else {
+          interimText += result[0].transcript
         }
       }
       if (finalText) {
-        setTranscript(finalText)
-        setIsListening(false)
+        setTranscript(prev => prev + ' ' + finalText)
       }
     }
 

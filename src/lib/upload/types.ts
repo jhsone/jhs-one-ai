@@ -46,6 +46,9 @@ export const SUPPORTED_TYPES: Record<string, FileType> = {
   'audio/mpeg': 'audio',
   'audio/wav': 'audio',
   'audio/ogg': 'audio',
+  'audio/mp4': 'audio',
+  'audio/x-m4a': 'audio',
+  'audio/aac': 'audio',
 }
 
 export const MAX_FILE_SIZE = 20 * 1024 * 1024

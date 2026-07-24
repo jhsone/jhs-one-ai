@@ -12,11 +12,17 @@ export interface AdapterInput {
 type AdapterFunction = (input: AdapterInput) => Promise<VisionAdapterResult>
 
 async function fetchImageAsBase64(url: string): Promise<{ mimeType: string; data: string }> {
-  const response = await fetch(url)
-  const buffer = await response.arrayBuffer()
-  const mimeType = response.headers.get('content-type') || 'image/jpeg'
-  const base64 = Buffer.from(buffer).toString('base64')
-  return { mimeType, data: base64 }
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
+  try {
+    const response = await fetch(url, { signal: controller.signal })
+    const buffer = await response.arrayBuffer()
+    const mimeType = response.headers.get('content-type') || 'image/jpeg'
+    const base64 = Buffer.from(buffer).toString('base64')
+    return { mimeType, data: base64 }
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 const geminiAdapter: AdapterFunction = async ({ apiKey, message, history, attachments, systemPrompt }) => {

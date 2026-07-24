@@ -37,6 +37,7 @@ export async function uploadToCloudinary(
   try {
     const isImage = mimeType.startsWith('image/')
     const isPdf = mimeType === 'application/pdf'
+    const isAudio = mimeType.startsWith('audio/')
 
     const base64 = buffer.toString('base64')
     const dataUri = `data:${mimeType};base64,${base64}`
@@ -44,7 +45,7 @@ export async function uploadToCloudinary(
     const result = await cloudinary.uploader.upload(dataUri, {
       folder: `jhs-one-ai/${userId}`,
       public_id: `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`,
-      resource_type: isImage || isPdf ? 'image' : 'raw',
+      resource_type: isImage || isPdf ? 'image' : isAudio ? 'video' : 'raw',
       ...(isImage ? { quality: 'auto', fetch_format: 'auto' } : {}),
     })
 

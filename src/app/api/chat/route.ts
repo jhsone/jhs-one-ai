@@ -88,13 +88,13 @@ export async function POST(req: NextRequest) {
           allDocAttachments.push(docAtt)
 
           if (ocrResult.success && ocrResult.fullText) {
-            await supabase
+            try { await supabase
               .from('attachments')
               .update({ context_text: ocrResult.fullText, page_count: ocrResult.pagesProcessed })
-              .eq('id', a.id)
+              .eq('id', a.id) } catch {}
           }
 
-          await supabase.from('document_logs').insert({
+          try { await supabase.from('document_logs').insert({
             attachment_id: a.id,
             user_id: user.id,
             document_type: ocrResult.documentType,
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
             language: ocrResult.language,
             success: ocrResult.success,
             error_message: ocrResult.error,
-          })
+          }) } catch {}
         } else {
           // Documents (PDF/DOCX/TXT/MD) — extract text
           const result = await documentEngine.processAttachment(docAtt)
@@ -113,13 +113,13 @@ export async function POST(req: NextRequest) {
           allDocAttachments.push(docAtt)
 
           if (result.success && result.fullText) {
-            await supabase
+            try { await supabase
               .from('attachments')
               .update({ context_text: result.fullText, page_count: result.pagesProcessed })
-              .eq('id', a.id)
+              .eq('id', a.id) } catch {}
           }
 
-          await supabase.from('document_logs').insert({
+          try { await supabase.from('document_logs').insert({
             attachment_id: a.id,
             user_id: user.id,
             document_type: result.documentType,
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
             language: result.language,
             success: result.success,
             error_message: result.error,
-          })
+          }) } catch {}
         }
       }
 

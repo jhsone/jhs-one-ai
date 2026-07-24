@@ -1,4 +1,5 @@
 import type { ParserResult } from '../types'
+import { extractWithGemini } from '@/lib/ocr/gemini-ocr'
 
 const OCR_LANGUAGES = 'eng+ben'
 
@@ -7,7 +8,6 @@ export async function extractTextFromImage(
   options?: { lang?: string }
 ): Promise<ParserResult> {
   const lang = options?.lang ?? OCR_LANGUAGES
-  const startTime = Date.now()
 
   try {
     const imageResponse = await fetch(imageUrl)
@@ -15,8 +15,12 @@ export async function extractTextFromImage(
       throw new Error(`Failed to fetch image: ${imageResponse.status}`)
     }
     const imageBuffer = await imageResponse.arrayBuffer()
+    const buf = Buffer.from(imageBuffer)
 
-    return await extractTextFromImageBuffer(Buffer.from(imageBuffer), 'image/*', { lang })
+    const geminiResult = await extractWithGemini(imageUrl)
+    if (geminiResult) return geminiResult
+
+    return await extractTextFromImageBuffer(buf, 'image/*', { lang })
   } catch (err) {
     return {
       success: false,
@@ -46,7 +50,6 @@ export async function extractTextFromImageBuffer(
       logger: () => {},
     })
 
-    // Set parameters for enhanced OCR accuracy on documents & receipts
     await worker.setParameters({
       tessedit_char_whitelist: '',
       preserve_interword_spaces: '1',
