@@ -155,6 +155,15 @@ export interface Attachment {
   created_at: string
 }
 
+export interface Reference {
+  title: string
+  url: string
+  domain: string
+  label: string
+  labelColor?: string
+  snippet?: string
+}
+
 export interface DashboardStats {
   total_users: number
   total_messages: number

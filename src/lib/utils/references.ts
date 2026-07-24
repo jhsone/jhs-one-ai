@@ -1,4 +1,4 @@
-import type { Reference } from '@/components/chat/References'
+import type { Reference } from '@/types'
 
 const REFERENCE_REGEX = /<references>\s*(\[[\s\S]*?\])\s*<\/references>/i
 
